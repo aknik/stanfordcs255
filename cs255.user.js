@@ -1,4 +1,4 @@
-// ==UserScript==
+// ==UserScript========
 // @namespace      CS255
 // @name           CS255-Rossin-Signorelli
 // @description    CS255 - Assignment 1
