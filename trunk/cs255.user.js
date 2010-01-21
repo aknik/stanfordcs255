@@ -488,8 +488,7 @@ function CryptoInit()
 
 function GetEntropy()
 {
-	return Random.random_word( 6 );		// FIXME FIXME : remove this one and restore previous code, but must find a way not to block when we get 'false' !!
-/*  if ( Random.get_progress() >= 1.0 )
+  if ( Random.get_progress() >= 1.0 )
   {
     return Random.random_word( 6 );
   }
@@ -498,7 +497,7 @@ function GetEntropy()
     alert( "Not enough entropy. After clicking OK, move your mouse around for a few seconds before trying again." );
     return false;
   }
-*/
+
 }
 
 function rot13( text )
