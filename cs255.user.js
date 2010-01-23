@@ -96,6 +96,17 @@ function Decrypt( tweet, author )
 
 function GenerateKey()
 {
+// FIXME FIXME: DEBUG
+/*	var key = [41, -2, 37, -2345618];
+	var plaintext = [100, 101, 102, 103, 104, 105, 106, 107];
+alert(plaintext);
+	var ciphertext = AesEncryptionWrapper(key, plaintext);
+alert(ciphertext);
+	var recoveredtext = AesDecryptionWrapper(key, ciphertext);
+alert(recoveredtext);
+	return;*/
+// FIXME FIXME: \DEBUG 
+	
 	user = my_username;
 	group = document.getElementById( 'gen-key-group' ).value;
 
@@ -106,23 +117,7 @@ function GenerateKey()
 
 	// CS255-todo: Well this needs some work...
 	//key = 'CS255-to';
-	var ii = 0;
-	key = new Array();
-	var word;
-	do {		// FIXME: thix does't work if GetEntropy() returns false! the loop repeats the function immediately, and there is no time to collect entropy !!! fix this and restore the original code for GetEntropy()
-		word = GetEntropy();		// get a new 32-bits word
-		if(word) {			// if it's valid, add it to the key being constructed
-			key.push(word);
-			++ii;
-// FIXME: DEBUG
-//alert(word);
-//alert(ii);
-//alert(KEYLEN);
-//alert(key);
-// FIXME: \DEBUG
-		}
-	} while(ii < KEYLEN);			// continue until you have all the bytes of the key
-
+	key = GenerateRandomArray(KEYLEN);
 	keyString = ArrayToHexString(key);
 // FIXME: DEBUG
 //alert(key);
@@ -203,6 +198,164 @@ function ArrayToHexString(array)
 }
 
 
+
+// FIXME FIXME FIXME FIXME : broken + must create a PRG...
+/*
+ * Wrapper of the GetEntropy() function.
+ * Returns an array of "len" 32-bit random words. GetEntropy() is called until all the "len" words are available.
+ */
+function GenerateRandomArray(len)
+{
+	var ii = 0;
+	var arr = new Array();
+	var word;
+
+	do {
+		word = GetEntropy();		// get a new 32-bit word
+		if( ! (word === false) ) {	// if it's valid, add it to the array
+			arr.push(word);
+			++ii;
+// FIXME: DEBUG
+//alert(word);
+//alert(ii);
+//alert(arr);
+// FIXME: \DEBUG
+		}
+	} while(ii < len);			// continue until you have all the words requested
+	
+	return arr;
+}
+
+
+
+/*
+ * Wrapper of the encryption core.
+ * Given a plaintext, it encrypts it using COUNTER MODE with a random IV.
+ * NOTE: the plaintext MUST be already padded, the array length must be a multiple of 4 32-bit words.
+ */
+/*
+function AesEncryptionWrapper(key, plaintext)
+{
+alert("AesEncryptionWrapper");
+// alert(key);
+// alert(plaintext);
+// 	var iv = GenerateRandomArray(4);	// generate a random 128-bit IV		FIXME FIXME
+	var iv = [1, 2, 3, 4];
+// alert(iv);
+	var cipher = new AES(key);
+	var ciphertext = new Array();		// the ciphertext is prepended with the random IV
+	ciphertext = ciphertext.concat(iv);
+// alert(ciphertext);
+
+	while(plaintext.length > 0) {		// for all blocks...
+// alert(plaintext.length);
+		var block = plaintext.splice(0, 4);		// get the first 4 words (i.e. one block)
+// alert(block);
+		var cipheriv = cipher.encrypt_core(iv);		// encrypt IV with the key
+// alert(cipheriv);
+		
+		var jj = 0;
+		while(jj < 4) {					// XOR the encrypted IV with the plaintext block
+			var cipherword = cipheriv[jj] ^ block[jj];
+// alert(cipherword);
+			ciphertext.push(cipherword);
+			++jj;
+		}
+// alert(ciphertext);
+alert(iv);
+		++iv;	// FIXME non puoi incrementare un array !!!!
+alert(iv);
+	}
+alert(ciphertext);
+	// emit the ciphertext
+	return ciphertext;
+}
+*/
+function AesEncryptionWrapper(key, plaintext)
+{
+// 	var iv = GenerateRandomArray(4);	// generate a random 128-bit IV	FIXME FIXME FIXME FIXME FIXME FIXME !!!!!!!!
+	var xorBlock = [1, 2, 3, 4];		// IV for the first round, encrypted block for the following rounds
+	var cipher = new AES(key);
+	var ciphertext = new Array();		// the ciphertext is prepended with the random IV
+	ciphertext = ciphertext.concat(xorBlock);
+	
+	while(plaintext.length > 0) {		// for all blocks...
+		var plainBlock = plaintext.splice(0, 4);		// get the first 4 words (i.e. one block)
+		var cipherBlock = XorArrays(plainBlock, xorBlock);	// XOR the plain block with the previous cipher block...
+		cipherBlock =  cipher.encrypt_core(cipherBlock);	// ... and encrypt it with the key
+		ciphertext = ciphertext.concat(cipherBlock);		// append the block to the ciphertext
+		xorBlock = cipherBlock;					// prepare the XOR for the next block
+	}
+	
+	// emit the ciphertext
+	return ciphertext;
+}
+
+
+
+/*
+ * Wrapper of the decryption core.
+ * Given a ciphertext (with the random IV prepended to the message), it decrypts it using COUNTER MODE.
+ * NOTE: the ciphertext is returned as an array of 32-bit words, with the padding (if any).
+ */
+/*
+function AesDecryptionWrapper(key, ciphertext)
+{
+	var iv = ciphertext.splice(0, 4);
+	var cipher = new AES(key);
+	var plaintext = new Array();
+	
+	while(ciphertext.length > 0) {
+		var block = ciphertext.splice(0, 4);
+		var cipheriv = cipher.encrypt_core(iv);
+		
+		var jj = 0;
+		while(jj < 4) {
+			var plainblock = cipheriv[jj] ^ block[jj];
+			plaintext.push(plainblock);
+			++jj;
+		}
+		
+		++iv;
+	}
+	
+	return plaintext;
+}
+*/
+function AesDecryptionWrapper(key, ciphertext)
+{
+	var xorBlock = ciphertext.splice(0, 4);		// IV for the first round, encrypted block for the following rounds
+	var cipher = new AES(key);
+	var plaintext = new Array();
+	
+	while(ciphertext.length > 0) {
+		var cipherBlock = ciphertext.splice(0, 4);
+		var plainBlock = cipher.decrypt_core(cipherBlock);
+		plainBlock = XorArrays(plainBlock, xorBlock);
+		plaintext = plaintext.concat(plainBlock);
+		xorBlock = cipherBlock;
+	}
+	
+	return plaintext;
+}
+
+
+/*
+ * Given two arrays of 32-bit words with the same length, it XORs the arrays words by word.
+ */
+function XorArrays(arr1, arr2)
+{
+	var len = arr1.length;
+	var res = new Array();
+	var i;
+	
+	for(i = 0; i < len; ++i) {
+		var xored = arr1[i] ^ arr2[i];
+		res.push(xored);
+	}
+	
+	return res;
+}
 
 
 
@@ -488,16 +641,16 @@ function CryptoInit()
 
 function GetEntropy()
 {
-  if ( Random.get_progress() >= 1.0 )
-  {
-    return Random.random_word( 6 );
-  }
-  else
-  {
-    alert( "Not enough entropy. After clicking OK, move your mouse around for a few seconds before trying again." );
-    return false;
-  }
-
+	return Random.random_word( 6 );		// FIXME FIXME FIXME 
+//   if ( Random.get_progress() >= 1.0 )
+//   {
+//     return Random.random_word( 6 );
+//   }
+//   else
+//   {
+//     alert( "Not enough entropy. After clicking OK, move your mouse around for a few seconds before trying again." );
+//     return false;
+//   }
 }
 
 function rot13( text )
