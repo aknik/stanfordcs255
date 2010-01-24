@@ -93,7 +93,6 @@ function Decrypt( tweet, author )
 
 
 
-
 function GenerateKey()
 {
 // FIXME FIXME: DEBUG
@@ -101,12 +100,38 @@ function GenerateKey()
 	var plaintext = [100, 101, 102, 103, 104, 105, 106, 107];
 alert(plaintext);
 	var ciphertext = AesEncryptionWrapper(key, plaintext);
+	if(ciphertext === false)
+		return;
 alert(ciphertext);
 	var recoveredtext = AesDecryptionWrapper(key, ciphertext);
 alert(recoveredtext);
 	return;*/
-// FIXME FIXME: \DEBUG 
-	
+
+	/*var arr = [100, 101, 102, 103, 104, 105, 106];
+	alert(arr);
+	var str = arrayToHexString(arr);
+	alert(str);
+	var arr2 = hexStringToArray(str);
+	alert(arr2);
+	return;*/
+
+	/*var rnd = GenerateRandomArray(3);
+	alert(rnd);
+	rnd = GenerateRandomArray(4);
+	alert(rnd);
+	rnd = GenerateRandomArray(1);
+	alert(rnd);
+	return;*/
+
+	var string = "Test String";
+	alert(string);
+	var arr = stringToIntArray(string);
+	alert(arr);
+	var string2 = intArrayToString(arr);
+	alert(string2);
+	return;
+// FIXME FIXME: \DEBUG
+
 	user = my_username;
 	group = document.getElementById( 'gen-key-group' ).value;
 
@@ -118,6 +143,8 @@ alert(recoveredtext);
 	// CS255-todo: Well this needs some work...
 	//key = 'CS255-to';
 	key = GenerateRandomArray(KEYLEN);
+	if(key === false)			// if there is not enough entropy, abort
+		return false;
 	keyString = ArrayToHexString(key);
 // FIXME: DEBUG
 //alert(key);
@@ -135,15 +162,25 @@ alert(recoveredtext);
 
 function SaveKeys()
 {
-  rows = [];
-  for ( i in keys )
-  {
-    // CS255-todo: plaintext keys going to disk?
-    rows[i] = keys[i][0] + '$' + keys[i][1] + '$'+ keys[i][2];
-  }
-  value = rows.join( '$$' );
+	// compact the keys in a string
+	rows = [];
+	for ( i in keys ) {
+		// CS255-todo: plaintext keys going to disk?
+		rows[i] = keys[i][0] + '$' + keys[i][1] + '$'+ keys[i][2];
+	}
 
-  GM_setValue( 'twit-keys', encodeURIComponent( value ) );
+	value = rows.join( '$$' );
+
+	// encrypt and save on disk
+	var masterPassword = GetMasterPassword();
+	/* TODO:
+		- pad string "value" to 16 bytes,
+		- convert to int array
+		- encrypt with master password
+		- convert int array to hex
+		- save to disk
+	*/
+	GM_setValue( 'twit-keys', encodeURIComponent( value ) );
 }
 
 
@@ -151,18 +188,18 @@ function SaveKeys()
 
 function LoadKeys()
 {
-  keys = [];
-  saved = GM_getValue( 'twit-keys', false );
-  if ( saved && saved.length > 2 )
-  {
-    key_str = decodeURIComponent( saved );
-    arr = key_str.split( '$$' );
-    for ( i in arr )
-    {
-      keys[i] = arr[i].split( '$' );
-      // CS255-todo: plaintext keys were on disk?
-    }
-  }
+//	GetMasterPassword();	// TODO
+
+	keys = [];
+	saved = GM_getValue( 'twit-keys', false );
+	if ( saved && saved.length > 2 ) {
+		key_str = decodeURIComponent( saved );
+		arr = key_str.split( '$$' );
+		for ( i in arr ) {
+			keys[i] = arr[i].split( '$' );
+			// CS255-todo: plaintext keys were on disk?
+		}
+	}
 }
 
 
@@ -174,16 +211,19 @@ function LoadKeys()
 //							//
 //////////////////////////////////////////////////////////
 
-function stringToIntArray(group,author,tweet){
+//function stringToIntArray(group,author,tweet){
+function stringToIntArray(str)
+{
 
      //Local variables
-     var len, iter, index, calc, str; 
+     var len, iter, index, calc, str;
 
      //Return variables
      var int = new Array();
 
-     str= group + author + tweet;
+//     str= group + author + tweet;
 
+/*
      //Check to see if message is %(4 chars)
      len = str.length;
      if(len%4 != 0){
@@ -192,36 +232,75 @@ function stringToIntArray(group,author,tweet){
                str += ' '; //Pad with zeroes
           }
      }
+*/
+     //Check to see if message is %(16 chars)
      len = str.length;
-     document.write('PADDED: ' + str + ' ');
+     if(len%16 != 0){
+          iter = 16-(len%16);
+          for(i=0; i<iter; i++){
+               str += ' '; //Pad with zeroes
+          }
+     }
+
+     len = str.length;
+     document.write('PADDED: ' + str + ' ');		// FIXME: remove
 
      //Split into array of (4 char elements)
-     document.write('ARRAY: ');
+     document.write('ARRAY: ');				// FIXME: remove
      for(i=0; i<len; i=i+4){
           int.push(str.substring(i,i+4));
-          document.write('[' + int[i] + '] ');
+          document.write('[' + int[i] + '] ');		// FIXME: remove
      }
 
      len = len/4;
-     document.write('INT ARRAY: ');
+     document.write('INT ARRAY: ');			// FIXME: remove
      for(i=0; i<len; i++){
           str = '';
           for(j=0; j<4; j++){
                calc = +(int[i].charAt(j)).charCodeAt()-32;
-               document.write(calc + ' ');
+               document.write(calc + ' ');		// FIXME: remove
                if(calc<10){
                     calc = calc + '';
                     calc = '0'+calc;
                }
                str += calc;
-          }  
+          }
           int[i] = str;
-          document.write('[' + int[i] + '] ');
+          document.write('[' + int[i] + '] ');		// FIXME: remove
      }
 
      return int;
 
 }
+
+
+
+function intArrayToString(intarray){
+
+     //Local variables
+     var len, temp;
+
+     //Return variable
+     var str = new String()
+     len = intarray.length;
+     str = '';
+
+     document.write('STRING: "');				// FIXME: remove
+     for(i=0; i<len; i++){
+          for(j=0; j<8; j=j+2){
+               temp = intarray[i].charAt(j) + intarray[i].charAt(j+1);
+               temp = +temp+32;
+               str += String.fromCharCode(temp);
+               //document.write(str + ' ');
+          }
+     }
+     document.write(str);					// FIXME: remove
+     document.write('" ');					// FIXME: remove
+     document.write(str.length);				// FIXME: remove
+
+     return str;
+}
+
 
 
 function arrayToHexString(intarray){
@@ -234,17 +313,38 @@ function arrayToHexString(intarray){
 
      len = intarray.length;
      for(i=0; i<len; i++){
-          num = +intarray[i];	
+          num = +intarray[i];
           num += 2147483648;
           var s = num.toString(16);	// convert to hex
-          s = Array(9 - s.length).join('0') + s;	
+          s = Array(9 - s.length).join('0') + s;
           str += s;
      }
-     document.write('HEX STRING: ' + str + ' ');
+//     document.write('HEX STRING: ' + str + ' ');		// FIXME: remove
 
      return str;
 
 }
+/*
+function ArrayToHexString(array)
+{
+	string = new String();
+	var word;
+
+	for(word in array) {
+		var num = array[word];		// get the n-th word of the array
+		if(num < 0) {			// if it's negative, add 2^32 to make it positive (i.e. unsigned)
+			num += 4294967296;
+		}
+		var s = num.toString(16);	// convert to hex
+		s = Array(9 - s.length).join('0') + s;	// pad with zeros on the left, to get a length of 8 characters
+		//string += ('!' + s);
+		string += s;
+	}
+
+	return string.toUpperCase();
+}
+*/
+
 
 
 function hexStringToArray(hexstring){
@@ -256,15 +356,15 @@ function hexStringToArray(hexstring){
      var intarray = new Array();
 
      len = hexstring.length;
-     document.write('INT ARRAY: ');
+//     document.write('INT ARRAY: ');				// FIXME: remove
      for(i=0; i<len; i=i+8){
           temp = parseInt(hexstring.substring(i,i+8),16);
-          temp -= 2147483648; 
-          temp = temp + ''; 
-          temp = Array(9 - temp.length).join('0') + temp;
+          temp -= 2147483648;
+          //temp = temp + '';
+          //temp = Array(9 - temp.length).join('0') + temp;
           intarray.push(temp);
           index = i/8;
-          document.write('[' + intarray[index] + '] ');
+//          document.write('[' + intarray[index] + '] ');		// FIXME: remove
      }
 
      return intarray;
@@ -272,121 +372,125 @@ function hexStringToArray(hexstring){
 }
 
 
-function intArrayToString(intarray){
 
-     //Local variables
-     var len, temp;
+/*
+ * Gets the master password, either from a cookie or asking the user.
+ */
+function GetMasterPassword()
+{
+	var masterpass = GetCookie("master_password");
 
-     //Return variable
-     var str = new String()
-     len = intarray.length; 
-     str = '';
-    
-     document.write('STRING: ');
-     for(i=0; i<len; i++){
-          for(j=0; j<8; j=j+2){
-               temp = intarray[i].charAt(j) + intarray[i].charAt(j+1);
-               temp = +temp+32;
-               str += String.fromCharCode(temp);
-               //document.write(str + ' ');
-          }  
-     }
-     document.write(str);
+	if(masterpass == "") {
+		masterpass = prompt("Enter secret master password?", "");
+	}
 
-     return str;
+	SetCookie("master_password", masterpass);
 
+	return masterpass;
 }
 
 
 
-// FIXME FIXME FIXME FIXME : broken + must create a PRG...
 /*
- * Wrapper of the GetEntropy() function.
- * Returns an array of "len" 32-bit random words. GetEntropy() is called until all the "len" words are available.
+ * PRG based on GetEntropy(), which is used to generate a random IV and AES key
+ * (just the first time: these values are then saved in a cookie and used/updated for the whole session).
+ * Returns an array of "len" 32-bit random words.
  */
 function GenerateRandomArray(len)
 {
-	var ii = 0;
-	var arr = new Array();
-	var word;
+	// get PRG parameters from the cookies
+	var key = GetCookie("PRG_key");
+	var rndvalue = GetCookie("PRG_rndvalue");
+//alert(key);
+//alert(rndvalue);
 
-	do {
-		word = GetEntropy();		// get a new 32-bit word
-		if( ! (word === false) ) {	// if it's valid, add it to the array
-			arr.push(word);
-			++ii;
-// FIXME: DEBUG
+	// if the parameters were not saved (this is the first time the function is called), generate them with GetEntropy()
+	if(key == "" || rndvalue == "") {
+		var word;
+		var newKey = new Array();
+		var iv = new Array();
+
+		// generate the random key; if there is not enough entropy, abort
+//alert("key");
+		for(var ii = 0; ii < 4; ++ii) {
+			word = GetEntropy();
 //alert(word);
-//alert(ii);
-//alert(arr);
-// FIXME: \DEBUG
+			if(word === false)
+				return false;
+
+			newKey.push(word);
 		}
-	} while(ii < len);			// continue until you have all the words requested
-	
-	return arr;
+
+		// generate the random IV; if there is not enough entropy, abort
+		for(var jj = 0; jj < 4; ++jj) {
+			word = GetEntropy();
+			if(word === false)
+				return false;
+
+			iv.push(word);
+		}
+
+		// assign the new generated values
+		key = newKey;
+		rndvalue = iv;
+	}
+	else {
+		key = hexStringToArray(key);
+		rndvalue = hexStringToArray(rndvalue);
+	}
+//alert(key);
+//alert(rndvalue);
+
+
+	// use {key, rndvalue} to generate the requested words (PRG)
+	var randomWords = new Array();
+	var nBlocks = Math.ceil(len / 4);	// AES can generate only 4 32-bit words at a time... we'll slice the array later
+//alert(nBlocks);
+	var cipher = new AES(key);
+
+	for(var kk = 0; kk < nBlocks; ++kk) {	// keep feeding the rndvalue into the encryption block (chaining), and queue it into the array
+		rndvalue = cipher.encrypt_core(rndvalue);
+		randomWords = randomWords.concat(rndvalue);
+	}
+//alert(randomWords);
+	randomWords = randomWords.slice(0, len);	// keep only the words that were requested
+//alert(randomWords);
+
+	// save PRG parameters to cookies
+	key = arrayToHexString(key);
+	rndvalue = arrayToHexString(rndvalue);
+	SetCookie("PRG_key", key);
+	SetCookie("PRG_rndvalue", rndvalue);
+
+
+	return randomWords;
 }
 
 
 
 /*
  * Wrapper of the encryption core.
- * Given a plaintext, it encrypts it using COUNTER MODE with a random IV.
+ * Given a plaintext, it encrypts it using CBC with a random IV.
  * NOTE: the plaintext MUST be already padded, the array length must be a multiple of 4 32-bit words.
  */
-/*
 function AesEncryptionWrapper(key, plaintext)
 {
-alert("AesEncryptionWrapper");
-// alert(key);
-// alert(plaintext);
-// 	var iv = GenerateRandomArray(4);	// generate a random 128-bit IV		FIXME FIXME
-	var iv = [1, 2, 3, 4];
-// alert(iv);
-	var cipher = new AES(key);
-	var ciphertext = new Array();		// the ciphertext is prepended with the random IV
-	ciphertext = ciphertext.concat(iv);
-// alert(ciphertext);
-
-	while(plaintext.length > 0) {		// for all blocks...
-// alert(plaintext.length);
-		var block = plaintext.splice(0, 4);		// get the first 4 words (i.e. one block)
-// alert(block);
-		var cipheriv = cipher.encrypt_core(iv);		// encrypt IV with the key
-// alert(cipheriv);
-		
-		var jj = 0;
-		while(jj < 4) {					// XOR the encrypted IV with the plaintext block
-			var cipherword = cipheriv[jj] ^ block[jj];
-// alert(cipherword);
-			ciphertext.push(cipherword);
-			++jj;
-		}
-// alert(ciphertext);
-alert(iv);
-		++iv;	// FIXME non puoi incrementare un array !!!!
-alert(iv);
-	}
-alert(ciphertext);
-	// emit the ciphertext
-	return ciphertext;
-}
-*/
-function AesEncryptionWrapper(key, plaintext)
-{
-// 	var iv = GenerateRandomArray(4);	// generate a random 128-bit IV	FIXME FIXME FIXME FIXME FIXME FIXME !!!!!!!!
-	var xorBlock = [1, 2, 3, 4];		// IV for the first round, encrypted block for the following rounds
+	var xorBlock = GenerateRandomArray(4);	// generate a random 128-bit IV for the first round
+	if(xorBlock === false)			// if there is not enough entropy, abort
+		return false;
+//var xorBlock = [1, 2, 3, 4];		// IV for the first round, encrypted block for the following rounds
 	var cipher = new AES(key);
 	var ciphertext = new Array();		// the ciphertext is prepended with the random IV
 	ciphertext = ciphertext.concat(xorBlock);
-	
+
 	while(plaintext.length > 0) {		// for all blocks...
 		var plainBlock = plaintext.splice(0, 4);		// get the first 4 words (i.e. one block)
 		var cipherBlock = XorArrays(plainBlock, xorBlock);	// XOR the plain block with the previous cipher block...
-		cipherBlock =  cipher.encrypt_core(cipherBlock);	// ... and encrypt it with the key
+		cipherBlock = cipher.encrypt_core(cipherBlock);		// ... and encrypt it with the key
 		ciphertext = ciphertext.concat(cipherBlock);		// append the block to the ciphertext
 		xorBlock = cipherBlock;					// prepare the XOR for the next block
 	}
-	
+
 	// emit the ciphertext
 	return ciphertext;
 }
@@ -395,39 +499,15 @@ function AesEncryptionWrapper(key, plaintext)
 
 /*
  * Wrapper of the decryption core.
- * Given a ciphertext (with the random IV prepended to the message), it decrypts it using COUNTER MODE.
+ * Given a ciphertext (with the random IV prepended to the message), it decrypts it using CBC.
  * NOTE: the ciphertext is returned as an array of 32-bit words, with the padding (if any).
  */
-/*
 function AesDecryptionWrapper(key, ciphertext)
 {
-	var iv = ciphertext.splice(0, 4);
+	var xorBlock = ciphertext.splice(0, 4);		// get the IV for the first round, encrypted block for the following rounds
 	var cipher = new AES(key);
 	var plaintext = new Array();
-	
-	while(ciphertext.length > 0) {
-		var block = ciphertext.splice(0, 4);
-		var cipheriv = cipher.encrypt_core(iv);
-		
-		var jj = 0;
-		while(jj < 4) {
-			var plainblock = cipheriv[jj] ^ block[jj];
-			plaintext.push(plainblock);
-			++jj;
-		}
-		
-		++iv;
-	}
-	
-	return plaintext;
-}
-*/
-function AesDecryptionWrapper(key, ciphertext)
-{
-	var xorBlock = ciphertext.splice(0, 4);		// IV for the first round, encrypted block for the following rounds
-	var cipher = new AES(key);
-	var plaintext = new Array();
-	
+
 	while(ciphertext.length > 0) {
 		var cipherBlock = ciphertext.splice(0, 4);
 		var plainBlock = cipher.decrypt_core(cipherBlock);
@@ -435,9 +515,10 @@ function AesDecryptionWrapper(key, ciphertext)
 		plaintext = plaintext.concat(plainBlock);
 		xorBlock = cipherBlock;
 	}
-	
+
 	return plaintext;
 }
+
 
 
 /*
@@ -448,14 +529,51 @@ function XorArrays(arr1, arr2)
 	var len = arr1.length;
 	var res = new Array();
 	var i;
-	
+
 	for(i = 0; i < len; ++i) {
 		var xored = arr1[i] ^ arr2[i];
 		res.push(xored);
 	}
-	
+
 	return res;
 }
+
+
+
+/*
+ * Given the cookie name and value, sets a cookie that expires when the browser closes (i.e. no expiration date).
+ */
+function SetCookie(name, value)
+{
+	document.cookie = name + "=" + escape(value);
+}
+
+
+
+/*
+ * Given the cookie name, recovers the value and returns it.
+ * If there is no cookie with that name, it returns false.
+ */
+function GetCookie(name)
+{
+	if(document.cookie.length > 0) {
+		c_start = document.cookie.indexOf(name + "=");
+//alert(c_start);	// FIXME: remove
+		if(c_start != -1) {
+			c_start = c_start + name.length + 1;
+			c_end = document.cookie.indexOf(";", c_start);
+//alert(c_end);		// FIXME: remove
+			if(c_end == -1)
+				c_end = document.cookie.length;
+//alert(unescape(document.cookie.substring(c_start, c_end)));	// FIXME: remove
+			return unescape(document.cookie.substring(c_start, c_end));
+		}
+	}
+
+	return "";
+}
+
+
 
 
 
@@ -741,16 +859,16 @@ function CryptoInit()
 
 function GetEntropy()
 {
-	return Random.random_word( 6 );		// FIXME FIXME FIXME 
-//   if ( Random.get_progress() >= 1.0 )
-//   {
-//     return Random.random_word( 6 );
-//   }
-//   else
-//   {
-//     alert( "Not enough entropy. After clicking OK, move your mouse around for a few seconds before trying again." );
-//     return false;
-//   }
+//	return Random.random_word( 6 );		// FIXME FIXME FIXME
+   if ( Random.get_progress() >= 1.0 )
+   {
+     return Random.random_word( 6 );
+   }
+   else
+   {
+     alert( "Not enough entropy. After clicking OK, move your mouse around for a few seconds before trying again." );
+     return false;
+   }
 }
 
 function rot13( text )
