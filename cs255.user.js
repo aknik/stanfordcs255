@@ -56,20 +56,33 @@ var KEYLEN = 4;		// number of words for the AES keys (e.g. 4 -> 4 words -> 16 by
 
 function Encrypt( tweet, author, group )
 {
-  // CS255-todo: encrypt the tweet author, using group.
-
-  if ( ( tweet.indexOf( 'rot13:' ) == 0 )
-    || ( tweet.length < 1 ) )
-  {
-    // already done, or blank
-    alert( "Try entering a tweet (the button works only once)" );
-    return tweet;
-  }
-  else
-  {
-    // encrypt, add tag.
-    return 'rot13:' + rot13( tweet );
-  }
+alert("Encrypt()");
+	// checks
+	if(tweet.length < 1) {
+		alert("Try entering a tweet");
+		return tweet;
+	}
+	if(tweet.indexOf('aes128:') == 0) {
+		alert("Tweet cannot start with \"aes128:\"");
+		return tweet;
+	}
+	if(group == undefined) {
+		alert("Must select a group");
+		return tweet;
+	}
+	
+	// encrypt, add tag.
+	var plainTweet = group + tweet;
+	plainTweet = StringToIntArray(plainTweet);
+	var key = GetKeyFromGroup(group);
+	if(key === false) {	// error: no key was found, group does not exist!
+		alert("Group not found");
+		return tweet;
+	}
+	var encryptedTweet = AesEncryptionWrapper(key, plainTweet);
+	encryptedTweet = ArrayToHexString(encryptedTweet);
+	
+	return 'aes128:' + encryptedTweet;
 }
 
 
@@ -77,60 +90,37 @@ function Encrypt( tweet, author, group )
 
 function Decrypt( tweet, author )
 {
-  // CS255-todo: implement decryption on encrypted tweets
+alert("Decrypt()");
 
-  // decrypt, ignore the tag.
-  if ( tweet.indexOf( 'rot13:' ) == 0 )
-  {
-    return tweet + '<br><font color="red"><b>' + author + ': </b>'
-      + rot13( tweet.slice( 6 ) ) + '</font>';
-  }
-  else
-  {
-    return tweet;
-  }
+	// decrypt, ignore the tag.
+	if(tweet.indexOf('aes128:') == 0) {
+		// sweep all group/keys to find the correct one
+		for(var i in keys) {
+			var group = keys[i][1];
+			var key = keys[i][2];
+			var decrtweet = tweet.substr('aes128:'.length);
+			decrtweet = HexStringToArray(decrtweet);
+			decrtweet = AesDecryptionWrapper(key, decrtweet);
+			decrtweet = IntArrayToString(decrtweet);
+			if(decrtweet.indexOf(group) == 0) {	// correct group/key found!
+				decrtweet = decrtweet.substr(group.length);
+				return tweet + '<br><font color="red"><b>' + author + ': </b>' + decrtweet + '</font>';
+			}
+		}
+		
+		// no key was found to decrypt the tweet
+		return tweet;
+	}
+	else {
+		return tweet;
+	}
 }
 
 
 
 function GenerateKey()
 {
-// FIXME FIXME: DEBUG
-/*	var key = [41, -2, 37, -2345618];
-	var plaintext = [100, 101, 102, 103, 104, 105, 106, 107];
-alert(plaintext);
-	var ciphertext = AesEncryptionWrapper(key, plaintext);
-	if(ciphertext === false)
-		return;
-alert(ciphertext);
-	var recoveredtext = AesDecryptionWrapper(key, ciphertext);
-alert(recoveredtext);
-	return;*/
-
-	/*var arr = [100, 101, 102, 103, 104, 105, 106];
-	alert(arr);
-	var str = arrayToHexString(arr);
-	alert(str);
-	var arr2 = hexStringToArray(str);
-	alert(arr2);
-	return;*/
-
-	/*var rnd = GenerateRandomArray(3);
-	alert(rnd);
-	rnd = GenerateRandomArray(4);
-	alert(rnd);
-	rnd = GenerateRandomArray(1);
-	alert(rnd);
-	return;*/
-
-	var string = "Test String";
-	alert(string);
-	var arr = stringToIntArray(string);
-	alert(arr);
-	var string2 = intArrayToString(arr);
-	alert(string2);
-	return;
-// FIXME FIXME: \DEBUG
+alert("GenerateKey()");
 
 	user = my_username;
 	group = document.getElementById( 'gen-key-group' ).value;
@@ -140,20 +130,16 @@ alert(recoveredtext);
 		return;
 	}
 
-	// CS255-todo: Well this needs some work...
-	//key = 'CS255-to';
 	key = GenerateRandomArray(KEYLEN);
 	if(key === false)			// if there is not enough entropy, abort
 		return false;
 	keyString = ArrayToHexString(key);
-// FIXME: DEBUG
-//alert(key);
-// FIXME: \DEBUG
-
-	//new_key = [ user, group, key ];
+	
 	new_key = [ user, group, keyString ];
 	keys.push( new_key );
-	SaveKeys();
+	var ret = SaveKeys();
+/*	if(ret === false)
+		return false;*/
 	UpdateKeysTable();
 }
 
@@ -162,25 +148,25 @@ alert(recoveredtext);
 
 function SaveKeys()
 {
+alert("SaveKeys()");
+
 	// compact the keys in a string
 	rows = [];
-	for ( i in keys ) {
-		// CS255-todo: plaintext keys going to disk?
+	for ( i in keys )
 		rows[i] = keys[i][0] + '$' + keys[i][1] + '$'+ keys[i][2];
-	}
 
-	value = rows.join( '$$' );
+	allkeys = rows.join( '$$' );
 
 	// encrypt and save on disk
-	var masterPassword = GetMasterPassword();
-	/* TODO:
-		- pad string "value" to 16 bytes,
-		- convert to int array
-		- encrypt with master password
-		- convert int array to hex
-		- save to disk
-	*/
-	GM_setValue( 'twit-keys', encodeURIComponent( value ) );
+	var masterPassword = GetMasterPassword(true);
+	allkeys = "alltwitterkeys" + allkeys;		// a known string, to check when decrypting passwords
+	allkeys = StringToIntArray(allkeys);
+	var encryptedKeys = AesEncryptionWrapper(masterPassword, allkeys);
+	if(encryptedKeys === false)
+		return false;
+	encryptedKeys = ArrayToHexString(encryptedKeys);
+	
+	GM_setValue( 'twit-keys', encodeURIComponent( encryptedKeys ) );
 }
 
 
@@ -188,8 +174,40 @@ function SaveKeys()
 
 function LoadKeys()
 {
-//	GetMasterPassword();	// TODO
-
+alert("LoadKeys()");
+	
+	keys = [];
+	saved = GM_getValue( 'twit-keys', false );
+	if ( saved && saved.length > 2 ) {
+		key_str = decodeURIComponent( saved );
+		
+		var encryptedKeys = HexStringToArray(key_str);
+		var masterPassword = GetMasterPassword(true);
+		decryptedKeys = AesDecryptionWrapper(masterPassword, encryptedKeys);
+		decryptedKeys = IntArrayToString(decryptedKeys);
+		var count = 3;
+		while(decryptedKeys.indexOf("alltwitterkeys") != 0) {	// if master password is wrong: ask again until it's correct, or tries expire
+			if(count == 0) {
+				alert("Tries expired");
+				return "";
+			}
+			--count;
+			
+			masterPassword = GetMasterPassword(false);
+			decryptedKeys = AesDecryptionWrapper(masterPassword, encryptedKeys);
+			decryptedKeys = IntArrayToString(decryptedKeys);
+		}
+		decryptedKeys = decryptedKeys.substr("alltwitterkeys".length);
+		
+		arr = decryptedKeys.split( '$$' );
+		for ( i in arr )
+			keys[i] = arr[i].split( '$' );
+	}
+}
+/*
+function LoadKeys()
+{
+alert("LoadKeys()");
 	keys = [];
 	saved = GM_getValue( 'twit-keys', false );
 	if ( saved && saved.length > 2 ) {
@@ -197,11 +215,10 @@ function LoadKeys()
 		arr = key_str.split( '$$' );
 		for ( i in arr ) {
 			keys[i] = arr[i].split( '$' );
-			// CS255-todo: plaintext keys were on disk?
+			// CS255-todo: plaintext keys were on disk?^M
 		}
 	}
-}
-
+}*/
 
 
 
@@ -211,7 +228,7 @@ function LoadKeys()
 //							//
 //////////////////////////////////////////////////////////
 
-function stringToIntArray(str){
+function StringToIntArray(str){
 
      //Local variables
      var len, iter, index, calc; 
@@ -219,9 +236,9 @@ function stringToIntArray(str){
      //Return variables
      var int = new Array();
 
-     str = group + author + tweet;
+//      str = group + author + tweet;
 
-     //Check to see if message is %(4 chars)
+     //Check to see if message is %(16 chars)
      len = str.length;
      if(len%16 != 0){
           iter = 16-(len%16);
@@ -230,19 +247,19 @@ function stringToIntArray(str){
           }
      }
      len = str.length;
-     document.write('PADDED: ' + str + ' ' + str.length + ' ');
+//      document.write('PADDED: ' + str + ' ' + str.length + ' ');
 
 
      //Split into array of (4 char elements)
-     document.write('ARRAY: ');
+//      document.write('ARRAY: ');
      for(i=0; i<len; i=i+4){
           int.push(str.substring(i,i+4));
-          document.write('[' + int[i] + '] ');
+//           document.write('[' + int[i] + '] ');
      }
 
      len = len/4;
      calc = [];
-     document.write('INT ARRAY: ');
+//      document.write('INT ARRAY: ');
      for(i=0; i<len; i++){
           str = '';
           for(j=0; j<4; j++){
@@ -250,7 +267,7 @@ function stringToIntArray(str){
                calc[j] = calc[j] << (8*j);
           }  
           int[i] = calc[0]+calc[1]+calc[2]+calc[3];
-          document.write('[' + int[i] + '] ');
+//           document.write('[' + int[i] + '] ');
      }
 
      return int;
@@ -258,7 +275,7 @@ function stringToIntArray(str){
 }
 
 
-function arrayToHexString(intarray){
+function ArrayToHexString(intarray){
 
      //Local variables
      var word, num, len;
@@ -275,14 +292,14 @@ function arrayToHexString(intarray){
           str += s;
      }
      str = str + '';
-     document.write('HEX STRING: ' + str + ' ');
+//      document.write('HEX STRING: ' + str + ' ');
 
      return str;
 
 }
 
 
-function hexStringToArray(hexstring){
+function HexStringToArray(hexstring){
 
      //Local variables
      var len, index, temp;
@@ -291,14 +308,14 @@ function hexStringToArray(hexstring){
      var intarray = new Array();
 
      len = hexstring.length;
-     document.write('INT ARRAY: ');
+//      document.write('INT ARRAY: ');
      for(i=0; i<len; i=i+8){
           temp = parseInt(hexstring.substring(i,i+8),16);
           temp -= 2147483648; 
           //temp = Array(9 - temp.length).join('0') + temp;
           intarray.push(+temp);
           index = i/8;
-          document.write('[' + intarray[index] + '] ');
+//           document.write('[' + intarray[index] + '] ');
      }
 
      return intarray;
@@ -306,7 +323,7 @@ function hexStringToArray(hexstring){
 }
 
 
-function intArrayToString(intarray){
+function IntArrayToString(intarray){
 
      //Local variables
      var len, temp, tempstr;
@@ -317,7 +334,7 @@ function intArrayToString(intarray){
      len = intarray.length; 
      str = '';
     
-     document.write('STRING: ');
+//      document.write('STRING: ');
      for(i=0; i<len; i++){
           tempstr = '';
           for(j=0; j<4; j++){
@@ -329,12 +346,12 @@ function intArrayToString(intarray){
           str = str + tempstr;
      }
      str = str + '';
-     document.write(str + ' ' + str.length);
+//      document.write(str + ' ' + str.length);
 
      len = str.length;
      for(i=0; i<len; i++){
           if(str.charAt(i) == '\0'){
-               document.write('OUTPUT: ' + str.substring(0,i));
+//                document.write('OUTPUT: ' + str.substring(0,i));
                return str.substring(0,i);
           }
      }
@@ -346,17 +363,21 @@ function intArrayToString(intarray){
 
 /*
  * Gets the master password, either from a cookie or asking the user.
+ * If checkCookie == true, first the cookie is checked, and if there isn't one, the password is asked;
+ * if checkCookie == false, the cookie is not checked, and the password must be manually entered by the user.
  */
-function GetMasterPassword()
+function GetMasterPassword(checkCookie)
 {
-	var masterpass = GetCookie("master_password");
-
-	if(masterpass == "") {
-		masterpass = prompt("Enter secret master password?", "");
+	var masterpass;
+	
+	if(checkCookie === true)
+		masterpass = GetCookie("master_password");
+	
+	if(checkCookie === false || masterpass == "") {
+		masterpass = prompt("Enter secret master password", "");
+		SetCookie("master_password", masterpass);
 	}
-
-	SetCookie("master_password", masterpass);
-
+	
 	return masterpass;
 }
 
@@ -406,8 +427,8 @@ function GenerateRandomArray(len)
 		rndvalue = iv;
 	}
 	else {
-		key = hexStringToArray(key);
-		rndvalue = hexStringToArray(rndvalue);
+		key = HexStringToArray(key);
+		rndvalue = HexStringToArray(rndvalue);
 	}
 //alert(key);
 //alert(rndvalue);
@@ -428,8 +449,8 @@ function GenerateRandomArray(len)
 //alert(randomWords);
 
 	// save PRG parameters to cookies
-	key = arrayToHexString(key);
-	rndvalue = arrayToHexString(rndvalue);
+	key = ArrayToHexString(key);
+	rndvalue = ArrayToHexString(rndvalue);
 	SetCookie("PRG_key", key);
 	SetCookie("PRG_rndvalue", rndvalue);
 
@@ -542,6 +563,22 @@ function GetCookie(name)
 	}
 
 	return "";
+}
+
+
+
+/*
+ * Given a group, it returns the key of that group.
+ */
+function GetKeyFromGroup(group)
+{
+	for(var i in keys) {
+		if (keys[i][1] === group) {
+			return keys[i][2];
+		}
+	}
+	
+	return false;
 }
 
 
@@ -753,14 +790,18 @@ function AddKey()
   k = document.getElementById( 'new-key-key' ).value;
   new_key = [ u, g, k ];
   keys.push( new_key );
-  SaveKeys();
+	var ret = SaveKeys();
+/*	if(ret === false)
+		return false;*/
   UpdateKeysTable();
 }
 
 function DeleteKey( n )
 {
   keys.splice( n, 1 );
-  SaveKeys();
+	var ret = SaveKeys();
+/*	if(ret === false)
+		return false;*/
   UpdateKeysTable();
 }
 
