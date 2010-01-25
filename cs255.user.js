@@ -136,10 +136,15 @@ alert("GenerateKey()");
 	keyString = ArrayToHexString(key);
 	
 	new_key = [ user, group, keyString ];
+	
+	// try saving the keys
+	var oldKeys = keys.slice(0);
 	keys.push( new_key );
 	var ret = SaveKeys();
-/*	if(ret === false)
-		return false;*/
+	if(ret === false) {
+		keys = oldKeys.slice(0);
+		return false;
+	}
 	UpdateKeysTable();
 }
 
@@ -180,12 +185,12 @@ alert("LoadKeys()");
 	saved = GM_getValue( 'twit-keys', false );
 	if ( saved && saved.length > 2 ) {
 		key_str = decodeURIComponent( saved );
-		
 		var encryptedKeys = HexStringToArray(key_str);
 		var masterPassword = GetMasterPassword(true);
 		decryptedKeys = AesDecryptionWrapper(masterPassword, encryptedKeys);
 		decryptedKeys = IntArrayToString(decryptedKeys);
-		var count = 3;
+
+		var count = 2;
 		while(decryptedKeys.indexOf("alltwitterkeys") != 0) {	// if master password is wrong: ask again until it's correct, or tries expire
 			if(count == 0) {
 				alert("Tries expired");
@@ -194,9 +199,11 @@ alert("LoadKeys()");
 			--count;
 			
 			masterPassword = GetMasterPassword(false);
+			encryptedKeys = HexStringToArray(key_str);
 			decryptedKeys = AesDecryptionWrapper(masterPassword, encryptedKeys);
 			decryptedKeys = IntArrayToString(decryptedKeys);
 		}
+		
 		decryptedKeys = decryptedKeys.substr("alltwitterkeys".length);
 		
 		arr = decryptedKeys.split( '$$' );
@@ -789,20 +796,32 @@ function AddKey()
   g = document.getElementById( 'new-key-group' ).value;
   k = document.getElementById( 'new-key-key' ).value;
   new_key = [ u, g, k ];
-  keys.push( new_key );
+/*  keys.push( new_key );
+  SaveKeys();
+  UpdateKeysTable();*/
+	var oldKeys = keys.slice(0);
+	keys.push( new_key );
 	var ret = SaveKeys();
-/*	if(ret === false)
-		return false;*/
-  UpdateKeysTable();
+	if(ret === false) {
+		keys = oldKeys.slice(0);
+		return false;
+	}
+	UpdateKeysTable();
 }
 
 function DeleteKey( n )
 {
-  keys.splice( n, 1 );
+/*  keys.splice( n, 1 );
+  ret = SaveKeys();
+  UpdateKeysTable();*/
+	var oldKeys = keys.slice(0);	// deep copy
+	keys.splice( n, 1 );
 	var ret = SaveKeys();
-/*	if(ret === false)
-		return false;*/
-  UpdateKeysTable();
+	if(ret === false) {
+		keys = oldKeys.slice(0);
+		return false;
+	}
+	UpdateKeysTable();
 }
 
 function DoEncrypt()
