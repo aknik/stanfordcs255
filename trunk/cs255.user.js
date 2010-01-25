@@ -211,96 +211,51 @@ function LoadKeys()
 //							//
 //////////////////////////////////////////////////////////
 
-//function stringToIntArray(group,author,tweet){
-function stringToIntArray(str)
-{
+function stringToIntArray(str){
 
      //Local variables
-     var len, iter, index, calc, str;
+     var len, iter, index, calc; 
 
      //Return variables
      var int = new Array();
 
-//     str= group + author + tweet;
+     str = group + author + tweet;
 
-/*
      //Check to see if message is %(4 chars)
-     len = str.length;
-     if(len%4 != 0){
-          iter = 4-(len%4);
-          for(i=0; i<iter; i++){
-               str += ' '; //Pad with zeroes
-          }
-     }
-*/
-     //Check to see if message is %(16 chars)
      len = str.length;
      if(len%16 != 0){
           iter = 16-(len%16);
           for(i=0; i<iter; i++){
-               str += ' '; //Pad with zeroes
+               str += '\0'; //Pad with zeroes
           }
      }
-
      len = str.length;
-     document.write('PADDED: ' + str + ' ');		// FIXME: remove
+     document.write('PADDED: ' + str + ' ' + str.length + ' ');
+
 
      //Split into array of (4 char elements)
-     document.write('ARRAY: ');				// FIXME: remove
+     document.write('ARRAY: ');
      for(i=0; i<len; i=i+4){
           int.push(str.substring(i,i+4));
-          document.write('[' + int[i] + '] ');		// FIXME: remove
+          document.write('[' + int[i] + '] ');
      }
 
      len = len/4;
-     document.write('INT ARRAY: ');			// FIXME: remove
+     calc = [];
+     document.write('INT ARRAY: ');
      for(i=0; i<len; i++){
           str = '';
           for(j=0; j<4; j++){
-               calc = +(int[i].charAt(j)).charCodeAt()-32;
-               document.write(calc + ' ');		// FIXME: remove
-               if(calc<10){
-                    calc = calc + '';
-                    calc = '0'+calc;
-               }
-               str += calc;
-          }
-          int[i] = str;
-          document.write('[' + int[i] + '] ');		// FIXME: remove
+               calc[j] = +(int[i].charAt(j)).charCodeAt();
+               calc[j] = calc[j] << (8*j);
+          }  
+          int[i] = calc[0]+calc[1]+calc[2]+calc[3];
+          document.write('[' + int[i] + '] ');
      }
 
      return int;
 
 }
-
-
-
-function intArrayToString(intarray){
-
-     //Local variables
-     var len, temp;
-
-     //Return variable
-     var str = new String()
-     len = intarray.length;
-     str = '';
-
-     document.write('STRING: "');				// FIXME: remove
-     for(i=0; i<len; i++){
-          for(j=0; j<8; j=j+2){
-               temp = intarray[i].charAt(j) + intarray[i].charAt(j+1);
-               temp = +temp+32;
-               str += String.fromCharCode(temp);
-               //document.write(str + ' ');
-          }
-     }
-     document.write(str);					// FIXME: remove
-     document.write('" ');					// FIXME: remove
-     document.write(str.length);				// FIXME: remove
-
-     return str;
-}
-
 
 
 function arrayToHexString(intarray){
@@ -313,38 +268,18 @@ function arrayToHexString(intarray){
 
      len = intarray.length;
      for(i=0; i<len; i++){
-          num = +intarray[i];
+          num = +intarray[i];	
           num += 2147483648;
           var s = num.toString(16);	// convert to hex
-          s = Array(9 - s.length).join('0') + s;
+          s = Array(9 - s.length).join('0') + s;	
           str += s;
      }
-//     document.write('HEX STRING: ' + str + ' ');		// FIXME: remove
+     str = str + '';
+     document.write('HEX STRING: ' + str + ' ');
 
      return str;
 
 }
-/*
-function ArrayToHexString(array)
-{
-	string = new String();
-	var word;
-
-	for(word in array) {
-		var num = array[word];		// get the n-th word of the array
-		if(num < 0) {			// if it's negative, add 2^32 to make it positive (i.e. unsigned)
-			num += 4294967296;
-		}
-		var s = num.toString(16);	// convert to hex
-		s = Array(9 - s.length).join('0') + s;	// pad with zeros on the left, to get a length of 8 characters
-		//string += ('!' + s);
-		string += s;
-	}
-
-	return string.toUpperCase();
-}
-*/
-
 
 
 function hexStringToArray(hexstring){
@@ -356,18 +291,54 @@ function hexStringToArray(hexstring){
      var intarray = new Array();
 
      len = hexstring.length;
-//     document.write('INT ARRAY: ');				// FIXME: remove
+     document.write('INT ARRAY: ');
      for(i=0; i<len; i=i+8){
           temp = parseInt(hexstring.substring(i,i+8),16);
-          temp -= 2147483648;
-          //temp = temp + '';
+          temp -= 2147483648; 
           //temp = Array(9 - temp.length).join('0') + temp;
-          intarray.push(temp);
+          intarray.push(+temp);
           index = i/8;
-//          document.write('[' + intarray[index] + '] ');		// FIXME: remove
+          document.write('[' + intarray[index] + '] ');
      }
 
      return intarray;
+
+}
+
+
+function intArrayToString(intarray){
+
+     //Local variables
+     var len, temp, tempstr;
+
+     //Return variable
+     var str = new String();
+
+     len = intarray.length; 
+     str = '';
+    
+     document.write('STRING: ');
+     for(i=0; i<len; i++){
+          tempstr = '';
+          for(j=0; j<4; j++){
+               temp = intarray[i]%256;
+               //document.write(temp + ' ');
+               intarray[i] = intarray[i]>>8;
+               tempstr = tempstr + String.fromCharCode(temp);;
+          }  
+          str = str + tempstr;
+     }
+     str = str + '';
+     document.write(str + ' ' + str.length);
+
+     len = str.length;
+     for(i=0; i<len; i++){
+          if(str.charAt(i) == '\0'){
+               document.write('OUTPUT: ' + str.substring(0,i));
+               return str.substring(0,i);
+          }
+     }
+     return str;
 
 }
 
