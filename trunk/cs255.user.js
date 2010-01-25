@@ -56,7 +56,7 @@ var KEYLEN = 4;		// number of words for the AES keys (e.g. 4 -> 4 words -> 16 by
 
 function Encrypt( tweet, author, group )
 {
-alert("Encrypt()");
+// alert("Encrypt()");
 	// checks
 	if(tweet.length < 1) {
 		alert("Try entering a tweet");
@@ -80,6 +80,8 @@ alert("Encrypt()");
 		return tweet;
 	}
 	var encryptedTweet = AesEncryptionWrapper(key, plainTweet);
+	if(encryptedTweet == false)
+		return tweet;
 	encryptedTweet = ArrayToHexString(encryptedTweet);
 	
 	return 'aes128:' + encryptedTweet;
@@ -90,7 +92,7 @@ alert("Encrypt()");
 
 function Decrypt( tweet, author )
 {
-alert("Decrypt()");
+// alert("Decrypt()");
 
 	// decrypt, ignore the tag.
 	if(tweet.indexOf('aes128:') == 0) {
@@ -120,7 +122,7 @@ alert("Decrypt()");
 
 function GenerateKey()
 {
-alert("GenerateKey()");
+// alert("GenerateKey()");
 
 	user = my_username;
 	group = document.getElementById( 'gen-key-group' ).value;
@@ -153,7 +155,7 @@ alert("GenerateKey()");
 
 function SaveKeys()
 {
-alert("SaveKeys()");
+// alert("SaveKeys()");
 
 	// compact the keys in a string
 	rows = [];
@@ -179,7 +181,7 @@ alert("SaveKeys()");
 
 function LoadKeys()
 {
-alert("LoadKeys()");
+// alert("LoadKeys()");
 	
 	keys = [];
 	saved = GM_getValue( 'twit-keys', false );
