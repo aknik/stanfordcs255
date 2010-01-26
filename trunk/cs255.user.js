@@ -654,7 +654,7 @@ function AddElements()
       if ( keys[i][0] == my_username )
       {
         item = document.createElement( 'option' );
-        item.vaue = keys[i][1];
+        item.value = keys[i][1];
         item.innerHTML = keys[i][1];
         dropdown.appendChild( item );
       }
@@ -697,6 +697,11 @@ function AddElements()
 
 function UpdateKeysTable()
 {
+	// initialize current group to the first group in the dropdown menu
+	if(keys.length > 0)
+		current_group = keys[0][1];
+	
+	
   table = document.getElementById( 'keys-table' );
   if ( !table ) return;
   table.innerHTML = '';
