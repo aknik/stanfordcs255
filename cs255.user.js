@@ -126,12 +126,22 @@ function GenerateKey()
 
 	user = my_username;
 	group = document.getElementById( 'gen-key-group' ).value;
-
+	
+	// check that a group was inserted
 	if ( group.length < 1 )	{
 		alert( "You need to set a group" );
 		return;
 	}
-
+	
+	// check if group name is a duplicate
+	for(var ii in keys) {
+		if(group == keys[ii][1]) {
+			alert("Group name already exists");
+			return false;
+		}
+	}
+	
+	// generate new key
 	key = GenerateRandomArray(KEYLEN);
 	if(key === false)			// if there is not enough entropy, abort
 		return false;
