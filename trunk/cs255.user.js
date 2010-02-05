@@ -70,7 +70,7 @@ function Encrypt( tweet, author, group )
 		alert("Must select a group");
 		return tweet;
 	}
-	
+
 	// encrypt, add tag.
 	var plainTweet = group + tweet;
 	plainTweet = StringToIntArray(plainTweet);
@@ -83,7 +83,7 @@ function Encrypt( tweet, author, group )
 	if(encryptedTweet == false)
 		return tweet;
 	encryptedTweet = ArrayToHexString(encryptedTweet);
-	
+
 	return 'aes128:' + encryptedTweet;
 }
 
@@ -109,7 +109,7 @@ function Decrypt( tweet, author )
 				return tweet + '<br><font color="red"><b>' + author + ': </b>' + decrtweet + '</font>';
 			}
 		}
-		
+
 		// no key was found to decrypt the tweet
 		return tweet;
 	}
@@ -126,13 +126,13 @@ function GenerateKey()
 
 	user = my_username;
 	group = document.getElementById( 'gen-key-group' ).value;
-	
+
 	// check that a group was inserted
 	if ( group.length < 1 )	{
 		alert( "You need to set a group" );
 		return;
 	}
-	
+
 	// check if group name is a duplicate
 	for(var ii in keys) {
 		if(group == keys[ii][1]) {
@@ -140,15 +140,15 @@ function GenerateKey()
 			return false;
 		}
 	}
-	
+
 	// generate new key
 	key = GenerateRandomArray(KEYLEN);
 	if(key === false)			// if there is not enough entropy, abort
 		return false;
 	keyString = ArrayToHexString(key);
-	
+
 	new_key = [ user, group, keyString ];
-	
+
 	// try saving the keys
 	var oldKeys = keys.slice(0);
 	keys.push( new_key );
@@ -182,7 +182,7 @@ function SaveKeys()
 	if(encryptedKeys === false)
 		return false;
 	encryptedKeys = ArrayToHexString(encryptedKeys);
-	
+
 	GM_setValue( 'twit-keys', encodeURIComponent( encryptedKeys ) );
 }
 
@@ -192,7 +192,7 @@ function SaveKeys()
 function LoadKeys()
 {
 // alert("LoadKeys()");
-	
+
 	keys = [];
 	saved = GM_getValue( 'twit-keys', false );
 	if ( saved && saved.length > 2 ) {
@@ -209,15 +209,15 @@ function LoadKeys()
 				return "";
 			}
 			--count;
-			
+
 			masterPassword = GetMasterPassword(false);
 			encryptedKeys = HexStringToArray(key_str);
 			decryptedKeys = AesDecryptionWrapper(masterPassword, encryptedKeys);
 			decryptedKeys = IntArrayToString(decryptedKeys);
 		}
-		
+
 		decryptedKeys = decryptedKeys.substr("alltwitterkeys".length);
-		
+
 		arr = decryptedKeys.split( '$$' );
 		for ( i in arr )
 			keys[i] = arr[i].split( '$' );
@@ -248,18 +248,66 @@ alert("LoadKeys()");
 //////////////////////////////////////////////////////////
 
 /*
- * 
+ * Input: an array of bytes (as int32, with value 0 <= v < 255)
+ * Returns: the array padded to 16 bytes, and packed to int32 (4 bytes into 1 int32);
+ *	the padding is done adding N bytes of value N to the end of the array
  */
-function PadByteArray
+function PadByteArray(byteArray)
 {
+//alert(byteArray);
+	var padLength = 16 - (byteArray.length % 16);
+	for(var i = 0; i < padLength; ++i) {
+		byteArray.push(padLength);
+	}
+
+//alert(byteArray);
+
+	var intArray = new Array();
+	var intArrayLen = byteArray.length / 4;
+	for(var i = 0; i < intArrayLen; ++i) {
+		var newInt = 0;
+		for(var j = 0; j < 4; ++j) {
+			newInt += byteArray[i * 4 + j] * (1 << (8 * (3 - j)));
+		}
+		intArray.push(newInt);
+	}
+
+//alert(intArray);
+
 }
+
+
+
+/*
+ * Reverses PadByteArray(), returning an array of bytes (as int32).
+ * If the padding is wrong, it returns false.
+ */
+function RemovePadding(intArray)
+{
+	var byteArray = new Array();
+	for(var i = 0; i < intArray.length; ++i) {
+		for(var j = 0; j < 4; ++j) {
+			byteArray.push(intArray[i] >> (8 * (3 - j)) & 0xFF);
+		}
+	}
+//alert(byteArray);
+
+	var padLen = byteArray.pop();
+	for(var i = 0; i < padLen - 1; ++i) {
+		var pad = byteArray.pop();
+		if(pad != padLen)
+			return false;
+	}
+//alert(byteArray);
+}
+
 
 
 
 function StringToIntArray(str){
 
      //Local variables
-     var len, iter, index, calc; 
+     var len, iter, index, calc;
 
      //Return variables
      var int = new Array();
@@ -293,7 +341,7 @@ function StringToIntArray(str){
           for(j=0; j<4; j++){
                calc[j] = +(int[i].charAt(j)).charCodeAt();
                calc[j] = calc[j] << (8*j);
-          }  
+          }
           int[i] = calc[0]+calc[1]+calc[2]+calc[3];
 //           document.write('[' + int[i] + '] ');
      }
@@ -313,10 +361,10 @@ function ArrayToHexString(intarray){
 
      len = intarray.length;
      for(i=0; i<len; i++){
-          num = +intarray[i];	
+          num = +intarray[i];
           num += 2147483648;
           var s = num.toString(16);	// convert to hex
-          s = Array(9 - s.length).join('0') + s;	
+          s = Array(9 - s.length).join('0') + s;
           str += s;
      }
      str = str + '';
@@ -339,7 +387,7 @@ function HexStringToArray(hexstring){
 //      document.write('INT ARRAY: ');
      for(i=0; i<len; i=i+8){
           temp = parseInt(hexstring.substring(i,i+8),16);
-          temp -= 2147483648; 
+          temp -= 2147483648;
           //temp = Array(9 - temp.length).join('0') + temp;
           intarray.push(+temp);
           index = i/8;
@@ -359,9 +407,9 @@ function IntArrayToString(intarray){
      //Return variable
      var str = new String();
 
-     len = intarray.length; 
+     len = intarray.length;
      str = '';
-    
+
 //      document.write('STRING: ');
      for(i=0; i<len; i++){
           tempstr = '';
@@ -370,7 +418,7 @@ function IntArrayToString(intarray){
                //document.write(temp + ' ');
                intarray[i] = intarray[i]>>8;
                tempstr = tempstr + String.fromCharCode(temp);;
-          }  
+          }
           str = str + tempstr;
      }
      str = str + '';
@@ -397,15 +445,15 @@ function IntArrayToString(intarray){
 function GetMasterPassword(checkCookie)
 {
 	var masterpass;
-	
+
 	if(checkCookie === true)
 		masterpass = GetCookie("master_password");
-	
+
 	if(checkCookie === false || masterpass == "") {
 		masterpass = prompt("Enter secret master password", "");
 		SetCookie("master_password", masterpass);
 	}
-	
+
 	return masterpass;
 }
 
@@ -605,7 +653,7 @@ function GetKeyFromGroup(group)
 			return keys[i][2];
 		}
 	}
-	
+
 	return false;
 }
 
@@ -719,8 +767,8 @@ function UpdateKeysTable()
 	// initialize current group to the first group in the dropdown menu
 	if(keys.length > 0)
 		current_group = keys[0][1];
-	
-	
+
+
   table = document.getElementById( 'keys-table' );
   if ( !table ) return;
   table.innerHTML = '';
