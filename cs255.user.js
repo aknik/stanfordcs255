@@ -80,6 +80,8 @@ function Encrypt( tweet, author, group )
 		return tweet;
 	}
 	var encryptedTweet = AesEncryptionWrapper(key, plainTweet);
+// 	BigMAC(encryptedTweet, key);
+	
 	if(encryptedTweet == false)
 		return tweet;
 	encryptedTweet = ArrayToHexString(encryptedTweet);
@@ -191,7 +193,41 @@ function SaveKeys()
 
 function LoadKeys()
 {
-// alert("LoadKeys()");
+// var key = [0xFFCDC201, 0x491B9C49, 0xCA0C63B9, 0x5F90D33A];
+// var message1 = "test!! jjhbwfb rjvbr vjbkjvbr ejvkb verjfaerhfohnf vrejavfk";
+// message1 = StringToIntArray(message1);
+// var hash1 = BigMac(key, message1);
+// alert(hash1);
+// 
+// var message2 = "test!! jjhbwfb sjvbr vjbkjvbr ejvkb verjfaerhfohnf vrejavfk";
+// message2 = StringToIntArray(message2);
+// var hash2 = BigMac(key, message2);
+// alert(hash2);
+// 
+// var bool = CompareArrays(hash1, hash2);
+// alert(bool);
+// 
+// return;
+
+// var password = "mypass!";
+// var byteArray = new Array();
+// for(var i = 0; i < password.length; ++i) {
+// 	byteArray.push(password.charCodeAt(i));
+// }
+// salt = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+// var key = KeyStrengthening(byteArray, salt, 100);
+// alert(key);
+// return;
+
+
+// var message = "This is my random string!";
+// alert(message);
+// var intArray = StringToIntArray(message);
+// alert(intArray);
+// var newMessage = IntArrayToString(intArray);
+// alert(newMessage);
+// return;
+
 
 	keys = [];
 	saved = GM_getValue( 'twit-keys', false );
@@ -223,21 +259,6 @@ function LoadKeys()
 			keys[i] = arr[i].split( '$' );
 	}
 }
-/*
-function LoadKeys()
-{
-alert("LoadKeys()");
-	keys = [];
-	saved = GM_getValue( 'twit-keys', false );
-	if ( saved && saved.length > 2 ) {
-		key_str = decodeURIComponent( saved );
-		arr = key_str.split( '$$' );
-		for ( i in arr ) {
-			keys[i] = arr[i].split( '$' );
-			// CS255-todo: plaintext keys were on disk?^M
-		}
-	}
-}*/
 
 
 
@@ -246,6 +267,65 @@ alert("LoadKeys()");
 //		Helper functions			//
 //							//
 //////////////////////////////////////////////////////////
+
+function LittleMac(key, block, previousHash)
+{
+	block = XorArrays(block, previousHash);
+	var cipher = new AES(key);
+	block = cipher.encrypt_core(block);
+	var newHash = XorArrays(block, previousHash);
+	return newHash;
+}
+
+
+
+function BigMac(key, message)
+{
+	var iv = [0xFFCDC201, 0x491B9C49, 0xCA0C63B9, 0x5F90D33A];
+	var myHash = iv;
+	
+	while(message.length > 0) {
+		var block = message.splice(0, 4);
+// alert(block);
+		myHash = LittleMac(key, block, myHash);
+// alert(myHash);
+	}
+
+	return myHash;
+}
+
+
+
+/*
+ * Input:
+ * 	- password (original key): array of bytes (as int32), any length
+ * 	- salt: array of bytes (as int32), 16 bytes (one block)
+ * 	- iterations: number of iterations for the strengthening
+ *
+ * Returns:
+ * 	- a new key, one block long (16 bytes)
+ */
+function KeyStrengthening(password, salt, iter)
+{
+	// concatenate the password with the salt
+	var key = new Array();
+	key = password.concat(salt);
+	
+	// use the hash to compress to one block, the iterate using the AES encryption; for AES we use a random but known key, since the purpose is just to slow down an attacker
+	key = PadByteArray(key);
+	var macKey = [0x586974E1, 0x5B70CBF7, 0x165A6018, 0x70EF298E];	// some random value from /dev/random
+	key = BigMac(macKey, key);
+	
+	var aesKey = [0xD7D694E8, 0xCE7C99D1, 0x714E6E2C, 0x314E525D];	// some random value from /dev/random
+	var cipher = new AES(aesKey);
+	for(var i = 0; i < iter; ++i)
+		key = cipher.encrypt_core(key);
+	
+	return key;
+}
+
+
+
 
 /*
  * Input: an array of bytes (as int32, with value 0 <= v < 255)
@@ -273,7 +353,7 @@ function PadByteArray(byteArray)
 	}
 
 //alert(intArray);
-
+	return intArray;
 }
 
 
@@ -284,6 +364,7 @@ function PadByteArray(byteArray)
  */
 function RemovePadding(intArray)
 {
+	// convert to array of bytes
 	var byteArray = new Array();
 	for(var i = 0; i < intArray.length; ++i) {
 		for(var j = 0; j < 4; ++j) {
@@ -292,6 +373,7 @@ function RemovePadding(intArray)
 	}
 //alert(byteArray);
 
+	// remove the padding
 	var padLen = byteArray.pop();
 	for(var i = 0; i < padLen - 1; ++i) {
 		var pad = byteArray.pop();
@@ -299,56 +381,29 @@ function RemovePadding(intArray)
 			return false;
 	}
 //alert(byteArray);
+	
+	return byteArray;
 }
 
 
 
 
-function StringToIntArray(str){
-
-     //Local variables
-     var len, iter, index, calc;
-
-     //Return variables
-     var int = new Array();
-
-//      str = group + author + tweet;
-
-     //Check to see if message is %(16 chars)
-     len = str.length;
-     if(len%16 != 0){
-          iter = 16-(len%16);
-          for(i=0; i<iter; i++){
-               str += '\0'; //Pad with zeroes
-          }
-     }
-     len = str.length;
-//      document.write('PADDED: ' + str + ' ' + str.length + ' ');
-
-
-     //Split into array of (4 char elements)
-//      document.write('ARRAY: ');
-     for(i=0; i<len; i=i+4){
-          int.push(str.substring(i,i+4));
-//           document.write('[' + int[i] + '] ');
-     }
-
-     len = len/4;
-     calc = [];
-//      document.write('INT ARRAY: ');
-     for(i=0; i<len; i++){
-          str = '';
-          for(j=0; j<4; j++){
-               calc[j] = +(int[i].charAt(j)).charCodeAt();
-               calc[j] = calc[j] << (8*j);
-          }
-          int[i] = calc[0]+calc[1]+calc[2]+calc[3];
-//           document.write('[' + int[i] + '] ');
-     }
-
-     return int;
-
+/*
+ * Input: an ASCII string
+ * Returns: an array padded to 16 bytes, and packed to int32 (4 bytes into 1 int32)
+ */
+function StringToIntArray(str)
+{
+	var byteArray = new Array();
+	for(var i = 0; i < str.length; ++i) {
+		byteArray.push(str.charCodeAt(i));
+	}
+	
+	var intArray = PadByteArray(byteArray);
+	
+	return intArray;
 }
+
 
 
 function ArrayToHexString(intarray){
@@ -399,40 +454,15 @@ function HexStringToArray(hexstring){
 }
 
 
-function IntArrayToString(intarray){
+function IntArrayToString(intArray)
+{
+	var byteArray = RemovePadding(intArray);
 
-     //Local variables
-     var len, temp, tempstr;
-
-     //Return variable
-     var str = new String();
-
-     len = intarray.length;
-     str = '';
-
-//      document.write('STRING: ');
-     for(i=0; i<len; i++){
-          tempstr = '';
-          for(j=0; j<4; j++){
-               temp = intarray[i]%256;
-               //document.write(temp + ' ');
-               intarray[i] = intarray[i]>>8;
-               tempstr = tempstr + String.fromCharCode(temp);;
-          }
-          str = str + tempstr;
-     }
-     str = str + '';
-//      document.write(str + ' ' + str.length);
-
-     len = str.length;
-     for(i=0; i<len; i++){
-          if(str.charAt(i) == '\0'){
-//                document.write('OUTPUT: ' + str.substring(0,i));
-               return str.substring(0,i);
-          }
-     }
-     return str;
-
+	var str = new String();
+	for(var i = 0; i < byteArray.length; ++i)
+		str += String.fromCharCode(byteArray[i]);
+	
+	return str;
 }
 
 
@@ -604,6 +634,22 @@ function XorArrays(arr1, arr2)
 	}
 
 	return res;
+}
+
+
+
+/*
+ * Given two arrays of 32-bit words with the same length, it returns true if they are equal (same length, same words).
+ */
+function CompareArrays(arr1, arr2)
+{
+	if(arr1.length != arr2.length)
+		return false;
+	
+	for(i = 0; i < arr1.length; ++i)
+		if(arr1[i] != arr2[i])
+			return false;
+	return true;
 }
 
 
