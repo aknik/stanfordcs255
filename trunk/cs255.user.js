@@ -247,6 +247,15 @@ alert("LoadKeys()");
 //							//
 //////////////////////////////////////////////////////////
 
+/*
+ * 
+ */
+function PadByteArray
+{
+}
+
+
+
 function StringToIntArray(str){
 
      //Local variables
