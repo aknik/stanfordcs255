@@ -72,21 +72,32 @@ function Encrypt( tweet, author, group )
 	}
 
 	// encrypt, add tag.
-	var plainTweet = group + tweet;
+	var plainTweet = tweet;
 	plainTweet = StringToIntArray(plainTweet);
-	var key = GetKeyFromGroup(group);
-	if(key === false) {	// error: no key was found, group does not exist!
+	var groupKey = GetKeyFromGroup(group);
+	if(groupKey === false) {	// error: no key was found, group does not exist!
 		alert("Group not found");
 		return tweet;
 	}
-	var encryptedTweet = AesEncryptionWrapper(key, plainTweet);
-// 	BigMAC(encryptedTweet, key);
-	
-	if(encryptedTweet == false)
-		return tweet;
-	encryptedTweet = ArrayToHexString(encryptedTweet);
 
-	return 'aes128:' + encryptedTweet;
+	// derive the encryption key and the MAC key from groupKey
+	var encrKey = DeriveEncryptionKey(groupKey, 1000);
+	var macKey = DeriveMacKey(groupKey, 1000);
+	
+	var encryptedTweet = AesEncryptionWrapper(encrKey, plainTweet);
+	if(encryptedTweet == false) {
+		alert("Couldn't encrypt, not enough entropy");
+		return tweet;
+	}
+	
+	var tmpEncryptedTweet = encryptedTweet.slice(0);
+	var mac = BigMac(macKey, tmpEncryptedTweet);
+
+// alert(ArrayToHexString(encryptedTweet));
+// alert(ArrayToHexString(mac));
+
+
+	return 'aes128:' + ArrayToHexString(mac) + ArrayToHexString(encryptedTweet);
 }
 
 
@@ -98,22 +109,35 @@ function Decrypt( tweet, author )
 
 	// decrypt, ignore the tag.
 	if(tweet.indexOf('aes128:') == 0) {
+		// remove tag
+		var tweet = tweet.substr('aes128:'.length);
+
+		// separate the ciphertext from the MAC and convert to int array
+		var macStr = tweet.substr(0, 32);
+		var encrTweetStr = tweet.substr(32);
+		var mac = HexStringToArray(macStr);
+		var encryptedTweet = HexStringToArray(encrTweetStr);
+
 		// sweep all group/keys to find the correct one
 		for(var i in keys) {
 			var group = keys[i][1];
-			var key = keys[i][2];
-			var decrtweet = tweet.substr('aes128:'.length);
-			decrtweet = HexStringToArray(decrtweet);
-			decrtweet = AesDecryptionWrapper(key, decrtweet);
-			decrtweet = IntArrayToString(decrtweet);
-			if(decrtweet.indexOf(group) == 0) {	// correct group/key found!
-				decrtweet = decrtweet.substr(group.length);
+			var groupKey = keys[i][2];
+
+			var encrKey = DeriveEncryptionKey(groupKey, 1000);
+			var macKey = DeriveMacKey(groupKey, 1000);
+
+			var tmpEncryptedTweet = encryptedTweet.slice(0);
+			var checkMac = BigMac(macKey, tmpEncryptedTweet);
+
+			if(CompareArrays(checkMac, mac)) {	// the MAC matches: the message hasn't been tampered with, and this is the correct key for decryption
+				var decrtweet = AesDecryptionWrapper(encrKey, encryptedTweet);
+				decrtweet = IntArrayToString(decrtweet);
 				return tweet + '<br><font color="red"><b>' + author + ': </b>' + decrtweet + '</font>';
 			}
 		}
 
 		// no key was found to decrypt the tweet
-		return tweet;
+		return "Error: Message tampered";
 	}
 	else {
 		return tweet;
@@ -176,83 +200,114 @@ function SaveKeys()
 
 	allkeys = rows.join( '$$' );
 
-	// encrypt and save on disk
+	// generate random salt for mac and encryption, and save them to cookies
+	var encrSalt = GenerateRandomArray(4);
+	var macSalt = GenerateRandomArray(4);
+// alert(encrSalt);
+	var encrSaltStr = ArrayToHexString(encrSalt);
+	var macSaltStr = ArrayToHexString(macSalt);
+// alert(encrSaltStr);
+	var encrSaltBytes = ConvertIntArrayToByteArray(encrSalt);
+	var macSaltBytes = ConvertIntArrayToByteArray(macSalt);
+// alert(encrSaltBytes);
+	SetCookie("encr_salt", encrSaltStr);
+	SetCookie("mac_salt", macSaltStr);
+alert(macSaltStr);
+
+	// get master password, and derive mac and encryption keys
 	var masterPassword = GetMasterPassword(true);
-	allkeys = "alltwitterkeys" + allkeys;		// a known string, to check when decrypting passwords
+	var masterPasswordBytes = new Array();		// convert to byte array
+	for(var i = 0; i < masterPassword.length; ++i) {
+		masterPasswordBytes.push(masterPassword.charCodeAt(i));
+	}
+
+	var encrKey = KeyStrengthening(masterPasswordBytes, encrSaltBytes, 1000);
+	var macKey = KeyStrengthening(masterPasswordBytes, macSaltBytes, 1000);
+
+	// encrypt and save on disk
 	allkeys = StringToIntArray(allkeys);
-	var encryptedKeys = AesEncryptionWrapper(masterPassword, allkeys);
+	var encryptedKeys = AesEncryptionWrapper(encrKey, allkeys);
 	if(encryptedKeys === false)
 		return false;
-	encryptedKeys = ArrayToHexString(encryptedKeys);
 
-	GM_setValue( 'twit-keys', encodeURIComponent( encryptedKeys ) );
+	var encryptedKeysStr = ArrayToHexString(encryptedKeys);
+	var tmpEncryptedKeys = encryptedKeys.slice(0);
+	var mac = BigMac(macKey, tmpEncryptedKeys);
+	macStr = ArrayToHexString(mac);
+
+	GM_setValue( 'twit-keys', encodeURIComponent( macStr + encryptedKeysStr ) );
 }
-
 
 
 
 function LoadKeys()
 {
-// var key = [0xFFCDC201, 0x491B9C49, 0xCA0C63B9, 0x5F90D33A];
-// var message1 = "test!! jjhbwfb rjvbr vjbkjvbr ejvkb verjfaerhfohnf vrejavfk";
-// message1 = StringToIntArray(message1);
-// var hash1 = BigMac(key, message1);
-// alert(hash1);
-// 
-// var message2 = "test!! jjhbwfb sjvbr vjbkjvbr ejvkb verjfaerhfohnf vrejavfk";
-// message2 = StringToIntArray(message2);
-// var hash2 = BigMac(key, message2);
-// alert(hash2);
-// 
-// var bool = CompareArrays(hash1, hash2);
-// alert(bool);
-// 
-// return;
-
-// var password = "mypass!";
-// var byteArray = new Array();
-// for(var i = 0; i < password.length; ++i) {
-// 	byteArray.push(password.charCodeAt(i));
-// }
-// salt = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
-// var key = KeyStrengthening(byteArray, salt, 100);
-// alert(key);
-// return;
-
-
-// var message = "This is my random string!";
-// alert(message);
-// var intArray = StringToIntArray(message);
-// alert(intArray);
-// var newMessage = IntArrayToString(intArray);
-// alert(newMessage);
-// return;
-
-
+alert("LoadKeys");
+	// retrieve the salt for ecnryption and mac keys
+	var encrSaltStr = GetCookie("encr_salt");
+	var macSaltStr = GetCookie("mac_salt");
+var tmpkey = GetCookie("PRG_key");
+alert(tmpkey);
+alert(macSaltStr);
+	var encrSalt = HexStringToArray(encrSaltStr);
+	var macSalt = HexStringToArray(macSaltStr);
+	var encrSaltBytes = ConvertIntArrayToByteArray(encrSalt);
+	var macSaltBytes = ConvertIntArrayToByteArray(macSalt);
+// alert(macSaltStr);
+	
 	keys = [];
 	saved = GM_getValue( 'twit-keys', false );
 	if ( saved && saved.length > 2 ) {
 		key_str = decodeURIComponent( saved );
-		var encryptedKeys = HexStringToArray(key_str);
+		
+		// separate the ciphertext from the MAC and convert to int array
+		var macStr = key_str.substr(0, 32);
+		var encryptedKeysStr = key_str.substr(32);
+// alert(macStr);
+// alert(encryptedKeysStr);
+		var mac = HexStringToArray(macStr);
+		var encryptedKeys = HexStringToArray(encryptedKeysStr);
+// alert(mac);
+// alert(encryptedKeys);
+		
+		// get master password, and derive mac and encryption keys
 		var masterPassword = GetMasterPassword(true);
-		decryptedKeys = AesDecryptionWrapper(masterPassword, encryptedKeys);
-		decryptedKeys = IntArrayToString(decryptedKeys);
-
+		var masterPasswordBytes = new Array();		// convert to byte array
+		for(var i = 0; i < masterPassword.length; ++i) {
+			masterPasswordBytes.push(masterPassword.charCodeAt(i));
+		}
+		var encrKey = KeyStrengthening(masterPasswordBytes, encrSaltBytes, 1000);
+		var macKey = KeyStrengthening(masterPasswordBytes, macSaltBytes, 1000);
+		
+		// check mac, decrypt
+		var tmpEncryptedKeys = encryptedKeys.slice(0);
+		var checkMac = BigMac(macKey, tmpEncryptedKeys);
+alert(mac);
+alert(checkMac);
 		var count = 2;
-		while(decryptedKeys.indexOf("alltwitterkeys") != 0) {	// if master password is wrong: ask again until it's correct, or tries expire
+		while(!CompareArrays(checkMac, mac)) {
 			if(count == 0) {
-				alert("Tries expired");
+				alert("Tries expired. Either you forgot the password, or someone tampered with the stored keys.");
 				return "";
 			}
 			--count;
 
+			// get master password, and derive mac and encryption keys
 			masterPassword = GetMasterPassword(false);
-			encryptedKeys = HexStringToArray(key_str);
-			decryptedKeys = AesDecryptionWrapper(masterPassword, encryptedKeys);
-			decryptedKeys = IntArrayToString(decryptedKeys);
+			var masterPasswordBytes = new Array();		// convert to byte array
+			for(var i = 0; i < masterPassword.length; ++i) {
+				masterPasswordBytes.push(masterPassword.charCodeAt(i));
+			}
+			var encrKey = KeyStrengthening(masterPasswordBytes, encrSaltBytes, 1000);
+			var macKey = KeyStrengthening(masterPasswordBytes, macSaltBytes, 1000);
+			
+			// check mac, decrypt
+			var tmpEncryptedKeys = encryptedKeys.slice(0);
+			var checkMac = BigMac(macKey, tmpEncryptedKeys);
 		}
 
-		decryptedKeys = decryptedKeys.substr("alltwitterkeys".length);
+		decryptedKeys = AesDecryptionWrapper(encrKey, encryptedKeys);
+		decryptedKeys = IntArrayToString(decryptedKeys);
 
 		arr = decryptedKeys.split( '$$' );
 		for ( i in arr )
@@ -267,6 +322,45 @@ function LoadKeys()
 //		Helper functions			//
 //							//
 //////////////////////////////////////////////////////////
+
+/*
+ *
+ */
+function DeriveEncryptionKey(groupKey, iter)
+{
+	var groupKeyBytes = ConvertIntArrayToByteArray(groupKey);
+	var encrSalt = [0xE4, 0x59, 0x42, 0x5A, 0x94, 0x3C, 0x39, 0x9E, 0x4A, 0xF5, 0x65, 0x9C, 0xC4, 0xAC, 0x7E, 0xAE];	// random salts from /dev/random
+	var encrKey = KeyStrengthening(groupKeyBytes, encrSalt, iter);
+	return encrKey;
+}
+
+
+function DeriveMacKey(groupKey, iter)
+{
+	var groupKeyBytes = ConvertIntArrayToByteArray(groupKey);
+	var macSalt = [0x90, 0xD0, 0x75, 0x1A, 0x14, 0xCB, 0xA6, 0x18, 0xB6, 0xB9, 0x63, 0x58, 0x02, 0x45, 0xA4, 0xF2];		// random salts from /dev/random
+	var macKey = KeyStrengthening(groupKeyBytes, macSalt, iter);
+	return macKey;
+}
+
+
+
+/*
+ * NOTE: all words muyst be "filled" with valid data, i.e. the function always returns a number of bytes which is multiple of 4.
+ */
+function ConvertIntArrayToByteArray(intArray)
+{
+	var byteArray = new Array();
+	for(var i = 0; i < intArray.length; ++i) {
+		for(var j = 0; j < 4; ++j) {
+			byteArray.push(intArray[i] >> (8 * (3 - j)) & 0xFF);
+		}
+	}
+	
+	return byteArray;
+}
+
+
 
 function LittleMac(key, block, previousHash)
 {
@@ -365,13 +459,13 @@ function PadByteArray(byteArray)
 function RemovePadding(intArray)
 {
 	// convert to array of bytes
-	var byteArray = new Array();
+	var byteArray = ConvertIntArrayToByteArray(intArray);
+/*	var byteArray = new Array();
 	for(var i = 0; i < intArray.length; ++i) {
 		for(var j = 0; j < 4; ++j) {
 			byteArray.push(intArray[i] >> (8 * (3 - j)) & 0xFF);
 		}
-	}
-//alert(byteArray);
+	}*/
 
 	// remove the padding
 	var padLen = byteArray.pop();
@@ -380,7 +474,6 @@ function RemovePadding(intArray)
 		if(pad != padLen)
 			return false;
 	}
-//alert(byteArray);
 	
 	return byteArray;
 }
@@ -425,7 +518,7 @@ function ArrayToHexString(intarray){
      str = str + '';
 //      document.write('HEX STRING: ' + str + ' ');
 
-     return str;
+     return str.toUpperCase();
 
 }
 
