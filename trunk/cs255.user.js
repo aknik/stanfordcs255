@@ -132,12 +132,13 @@ function Decrypt( tweet, author )
 			if(CompareArrays(checkMac, mac)) {	// the MAC matches: the message hasn't been tampered with, and this is the correct key for decryption
 				var decrtweet = AesDecryptionWrapper(encrKey, encryptedTweet);
 				decrtweet = IntArrayToString(decrtweet);
-				return tweet + '<br><font color="red"><b>' + author + ': </b>' + decrtweet + '</font>';
+				return 'aes128:' + tweet + '<br><font color="red"><b>' + author + ': </b>' + decrtweet + '</font>';
 			}
 		}
 
 		// no key was found to decrypt the tweet
-		return "Error: Message tampered";
+// 		return "Error: Message tampered";
+		return 'aes128:' + tweet + '<br><font color="red"><b>' + author + ': </b>Impossible to decrypt message: either you don\'t have the key or the message was tampered with.</font>';
 	}
 	else {
 		return tweet;
@@ -203,16 +204,14 @@ function SaveKeys()
 	// generate random salt for mac and encryption, and save them to cookies
 	var encrSalt = GenerateRandomArray(4);
 	var macSalt = GenerateRandomArray(4);
-// alert(encrSalt);
 	var encrSaltStr = ArrayToHexString(encrSalt);
 	var macSaltStr = ArrayToHexString(macSalt);
-// alert(encrSaltStr);
 	var encrSaltBytes = ConvertIntArrayToByteArray(encrSalt);
 	var macSaltBytes = ConvertIntArrayToByteArray(macSalt);
-// alert(encrSaltBytes);
-	SetCookie("encr_salt", encrSaltStr);
-	SetCookie("mac_salt", macSaltStr);
-alert(macSaltStr);
+// 	SetCookie("encr_salt", encrSaltStr, 10000);
+// 	SetCookie("mac_salt", macSaltStr, 10000);
+	GM_setValue( 'encr_salt', encodeURIComponent(encrSaltStr) );
+	GM_setValue( 'mac_salt', encodeURIComponent(macSaltStr) );
 
 	// get master password, and derive mac and encryption keys
 	var masterPassword = GetMasterPassword(true);
@@ -242,18 +241,16 @@ alert(macSaltStr);
 
 function LoadKeys()
 {
-alert("LoadKeys");
+// alert("LoadKeys");
 	// retrieve the salt for ecnryption and mac keys
-	var encrSaltStr = GetCookie("encr_salt");
-	var macSaltStr = GetCookie("mac_salt");
-var tmpkey = GetCookie("PRG_key");
-alert(tmpkey);
-alert(macSaltStr);
+/*	var encrSaltStr = GetCookie("encr_salt");
+	var macSaltStr = GetCookie("mac_salt");*/
+	var encrSaltStr = decodeURIComponent(GM_getValue( 'encr_salt', false ));
+	var macSaltStr = decodeURIComponent(GM_getValue( 'mac_salt', false ));
 	var encrSalt = HexStringToArray(encrSaltStr);
 	var macSalt = HexStringToArray(macSaltStr);
 	var encrSaltBytes = ConvertIntArrayToByteArray(encrSalt);
 	var macSaltBytes = ConvertIntArrayToByteArray(macSalt);
-// alert(macSaltStr);
 	
 	keys = [];
 	saved = GM_getValue( 'twit-keys', false );
@@ -282,8 +279,8 @@ alert(macSaltStr);
 		// check mac, decrypt
 		var tmpEncryptedKeys = encryptedKeys.slice(0);
 		var checkMac = BigMac(macKey, tmpEncryptedKeys);
-alert(mac);
-alert(checkMac);
+// alert(mac);
+// alert(checkMac);
 		var count = 2;
 		while(!CompareArrays(checkMac, mac)) {
 			if(count == 0) {
@@ -574,7 +571,7 @@ function GetMasterPassword(checkCookie)
 
 	if(checkCookie === false || masterpass == "") {
 		masterpass = prompt("Enter secret master password", "");
-		SetCookie("master_password", masterpass);
+		SetCookie("master_password", masterpass, false);
 	}
 
 	return masterpass;
@@ -650,8 +647,8 @@ function GenerateRandomArray(len)
 	// save PRG parameters to cookies
 	key = ArrayToHexString(key);
 	rndvalue = ArrayToHexString(rndvalue);
-	SetCookie("PRG_key", key);
-	SetCookie("PRG_rndvalue", rndvalue);
+	SetCookie("PRG_key", key, false);
+	SetCookie("PRG_rndvalue", rndvalue, false);
 
 
 	return randomWords;
@@ -750,11 +747,21 @@ function CompareArrays(arr1, arr2)
 /*
  * Given the cookie name and value, sets a cookie that expires when the browser closes (i.e. no expiration date).
  */
-function SetCookie(name, value)
+// function SetCookie(name, value)
+// {
+// 	document.cookie = name + "=" + escape(value) + "; path=/";
+// }
+function SetCookie(name, value, expiredays)
 {
-	document.cookie = name + "=" + escape(value);
+	if(expiredays === false) {	// no expiration date: cookie will expire when the browser closes
+		document.cookie = name + "=" + escape(value) + "; path=/";
+	}
+	else {				// set expiration date
+		var exdate = new Date();
+		exdate.setDate(exdate.getDate() + expiredays);
+		document.cookie = name + "=" + escape(value) + ";expires=" + exdate.toGMTString() + "; path=/";
+	}
 }
-
 
 
 /*
