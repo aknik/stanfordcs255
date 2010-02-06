@@ -113,8 +113,10 @@ function Decrypt( tweet, author )
 		var tweet = tweet.substr('aes128:'.length);
 
 		// separate the ciphertext from the MAC and convert to int array
-		var macStr = tweet.substr(0, 32);
-		var encrTweetStr = tweet.substr(32);
+/*		var macStr = tweet.substr(0, 32);
+		var encrTweetStr = tweet.substr(32);*/
+		var macStr = tweet.substr(0, 24);
+		var encrTweetStr = tweet.substr(24);
 		var mac = HexStringToArray(macStr);
 		var encryptedTweet = HexStringToArray(encrTweetStr);
 
@@ -212,6 +214,8 @@ function SaveKeys()
 // 	SetCookie("mac_salt", macSaltStr, 10000);
 	GM_setValue( 'encr_salt', encodeURIComponent(encrSaltStr) );
 	GM_setValue( 'mac_salt', encodeURIComponent(macSaltStr) );
+// alert(macSalt);
+// alert(macSaltStr);
 
 	// get master password, and derive mac and encryption keys
 	var masterPassword = GetMasterPassword(true);
@@ -251,15 +255,19 @@ function LoadKeys()
 	var macSalt = HexStringToArray(macSaltStr);
 	var encrSaltBytes = ConvertIntArrayToByteArray(encrSalt);
 	var macSaltBytes = ConvertIntArrayToByteArray(macSalt);
-	
+// alert(macSalt);
+// alert(macSaltStr);
+
 	keys = [];
 	saved = GM_getValue( 'twit-keys', false );
 	if ( saved && saved.length > 2 ) {
 		key_str = decodeURIComponent( saved );
 		
 		// separate the ciphertext from the MAC and convert to int array
-		var macStr = key_str.substr(0, 32);
-		var encryptedKeysStr = key_str.substr(32);
+/*		var macStr = key_str.substr(0, 32);
+		var encryptedKeysStr = key_str.substr(32);*/
+		var macStr = key_str.substr(0, 24);
+		var encryptedKeysStr = key_str.substr(24);
 // alert(macStr);
 // alert(encryptedKeysStr);
 		var mac = HexStringToArray(macStr);
