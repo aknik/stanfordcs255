@@ -321,7 +321,42 @@ function LoadKeys()
 //////////////////////////////////////////////////////////
 
 /*
- *
+ * NOTE: all words muyst be "filled" with valid data, i.e. the function always returns a number of bytes which is multiple of 4.
+ */
+function ConvertIntArrayToByteArray(intArray)
+{
+	var byteArray = new Array();
+	for(var i = 0; i < intArray.length; ++i) {
+		for(var j = 0; j < 4; ++j) {
+			byteArray.push(intArray[i] >> (8 * (3 - j)) & 0xFF);
+		}
+	}
+	
+	return byteArray;
+}
+
+
+function ConvertByteArrayToIntArray(byteArray)
+{
+	var intArray = new Array();
+	var intArrayLen = byteArray.length / 4;
+	for(var i = 0; i < intArrayLen; ++i) {
+		var newInt = 0;
+		for(var j = 0; j < 4; ++j) {
+			newInt += byteArray[i * 4 + j] * (1 << (8 * (3 - j)));
+		}
+		if(newInt > 2147483648)
+			newInt -= 4294967296;	// FIXME?
+		intArray.push(newInt);
+	}
+
+	return intArray;
+}
+
+
+
+/*
+ * Fixed salt for MAC and encryption keys derived from the group keys.
  */
 function DeriveEncryptionKey(groupKey, iter)
 {
@@ -338,23 +373,6 @@ function DeriveMacKey(groupKey, iter)
 	var macSalt = [0x90, 0xD0, 0x75, 0x1A, 0x14, 0xCB, 0xA6, 0x18, 0xB6, 0xB9, 0x63, 0x58, 0x02, 0x45, 0xA4, 0xF2];		// random salts from /dev/random
 	var macKey = KeyStrengthening(groupKeyBytes, macSalt, iter);
 	return macKey;
-}
-
-
-
-/*
- * NOTE: all words muyst be "filled" with valid data, i.e. the function always returns a number of bytes which is multiple of 4.
- */
-function ConvertIntArrayToByteArray(intArray)
-{
-	var byteArray = new Array();
-	for(var i = 0; i < intArray.length; ++i) {
-		for(var j = 0; j < 4; ++j) {
-			byteArray.push(intArray[i] >> (8 * (3 - j)) & 0xFF);
-		}
-	}
-	
-	return byteArray;
 }
 
 
@@ -377,9 +395,7 @@ function BigMac(key, message)
 	
 	while(message.length > 0) {
 		var block = message.splice(0, 4);
-// alert(block);
 		myHash = LittleMac(key, block, myHash);
-// alert(myHash);
 	}
 
 	return myHash;
@@ -425,13 +441,10 @@ function KeyStrengthening(password, salt, iter)
  */
 function PadByteArray(byteArray)
 {
-//alert(byteArray);
 	var padLength = 16 - (byteArray.length % 16);
 	for(var i = 0; i < padLength; ++i) {
 		byteArray.push(padLength);
 	}
-
-//alert(byteArray);
 
 	var intArray = new Array();
 	var intArrayLen = byteArray.length / 4;
@@ -443,7 +456,6 @@ function PadByteArray(byteArray)
 		intArray.push(newInt);
 	}
 
-//alert(intArray);
 	return intArray;
 }
 
@@ -457,12 +469,6 @@ function RemovePadding(intArray)
 {
 	// convert to array of bytes
 	var byteArray = ConvertIntArrayToByteArray(intArray);
-/*	var byteArray = new Array();
-	for(var i = 0; i < intArray.length; ++i) {
-		for(var j = 0; j < 4; ++j) {
-			byteArray.push(intArray[i] >> (8 * (3 - j)) & 0xFF);
-		}
-	}*/
 
 	// remove the padding
 	var padLen = byteArray.pop();
@@ -495,52 +501,98 @@ function StringToIntArray(str)
 }
 
 
+/*
+ * Functions to convert to and from Base64 (taken from: http://www.google.com/codesearch/p?hl=en#IiI0JZ4wesY/jfreechart/jcommon-0.9.1.zip|vNozRigxefU/jcommon-0.9.1/src/org/jfree/xml/util/Base64.java&q=base64
+ */
 
-function ArrayToHexString(intarray){
+function Codes(char)
+{
+	if(char == '+')
+		return 62;
+	if(char == '/')
+		return 63;
 
-     //Local variables
-     var word, num, len;
-
-     //Return variables
-     var str = new String();
-
-     len = intarray.length;
-     for(i=0; i<len; i++){
-          num = +intarray[i];
-          num += 2147483648;
-          var s = num.toString(16);	// convert to hex
-          s = Array(9 - s.length).join('0') + s;
-          str += s;
-     }
-     str = str + '';
-//      document.write('HEX STRING: ' + str + ' ');
-
-     return str.toUpperCase();
-
+	charcode = char.charCodeAt(0);
+	if(charcode >= 65 && charcode <= 90)
+		return (charcode - 65);
+	if(charcode >= 97 && charcode <= 122)
+		return (26 + charcode - 97);
+	if(charcode >= 48 && charcode <= 57)
+		return (52 + charcode - 48);
 }
 
 
-function HexStringToArray(hexstring){
+function ArrayToHexString(intArray)
+{
+	var symbols = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	var byteArray = ConvertIntArrayToByteArray(intArray);
+	
+	var output = new String();
+	var j = 0;
+	for(var i = 0; i < byteArray.length; i += 3) {
+		var quad = false;
+		var trip = false;
 
-     //Local variables
-     var len, index, temp;
+		var val = (0xFF & byteArray[i]);
+		val = val << 8;
+		if((i + 1) < byteArray.length) {
+			val |= (0xFF & byteArray[i + 1]);
+			trip = true;
+		}
+		val = val << 8;
+		if((i + 2) < byteArray.length) {
+			val |= (0xFF & byteArray[i + 2]);
+			quad = true;
+		}
 
-     //Return variables
-     var intarray = new Array();
+		var tmp = "";
+		if(quad)
+			tmp = symbols[val & 0x3F];
+		else
+			tmp = "=";
 
-     len = hexstring.length;
-//      document.write('INT ARRAY: ');
-     for(i=0; i<len; i=i+8){
-          temp = parseInt(hexstring.substring(i,i+8),16);
-          temp -= 2147483648;
-          //temp = Array(9 - temp.length).join('0') + temp;
-          intarray.push(+temp);
-          index = i/8;
-//           document.write('[' + intarray[index] + '] ');
-     }
+		val = val >> 6;
+		if(trip)
+			tmp = symbols[val & 0x3F] + tmp;
+		else
+			tmp = "=" + tmp;
 
-     return intarray;
+		val = val >> 6;
+		tmp = symbols[val & 0x3F] + tmp;
 
+		val = val >> 6;
+		tmp = symbols[val & 0x3F] + tmp;
+
+		output += tmp;
+		j += 4;
+	}
+	
+	return output;
+}
+
+
+function HexStringToArray(hexstring)
+{
+	var shift = 0;
+	var accum = 0;
+	var byteArray = new Array();
+
+	for (var i = 0; i < hexstring.length; ++i) {
+		if(hexstring.charAt(i) == '=')
+			break;
+
+		var value = Codes(hexstring.charAt(i));
+		accum = accum << 6;
+		shift += 6;
+		accum |= (value & 0x3F);
+		if(shift >= 8) {
+			shift -= 8;
+			byteArray.push((accum >> shift) & 0xFF);
+		}
+	}
+	
+	var intArray = ConvertByteArrayToIntArray(byteArray);
+	return intArray;
 }
 
 
@@ -589,8 +641,6 @@ function GenerateRandomArray(len)
 	// get PRG parameters from the cookies
 	var key = GetCookie("PRG_key");
 	var rndvalue = GetCookie("PRG_rndvalue");
-//alert(key);
-//alert(rndvalue);
 
 	// if the parameters were not saved (this is the first time the function is called), generate them with GetEntropy()
 	if(key == "" || rndvalue == "") {
@@ -599,10 +649,8 @@ function GenerateRandomArray(len)
 		var iv = new Array();
 
 		// generate the random key; if there is not enough entropy, abort
-//alert("key");
 		for(var ii = 0; ii < 4; ++ii) {
 			word = GetEntropy();
-//alert(word);
 			if(word === false)
 				return false;
 
@@ -626,23 +674,17 @@ function GenerateRandomArray(len)
 		key = HexStringToArray(key);
 		rndvalue = HexStringToArray(rndvalue);
 	}
-//alert(key);
-//alert(rndvalue);
-
 
 	// use {key, rndvalue} to generate the requested words (PRG)
 	var randomWords = new Array();
 	var nBlocks = Math.ceil(len / 4);	// AES can generate only 4 32-bit words at a time... we'll slice the array later
-//alert(nBlocks);
 	var cipher = new AES(key);
 
 	for(var kk = 0; kk < nBlocks; ++kk) {	// keep feeding the rndvalue into the encryption block (chaining), and queue it into the array
 		rndvalue = cipher.encrypt_core(rndvalue);
 		randomWords = randomWords.concat(rndvalue);
 	}
-//alert(randomWords);
 	randomWords = randomWords.slice(0, len);	// keep only the words that were requested
-//alert(randomWords);
 
 	// save PRG parameters to cookies
 	key = ArrayToHexString(key);
@@ -666,7 +708,6 @@ function AesEncryptionWrapper(key, plaintext)
 	var xorBlock = GenerateRandomArray(4);	// generate a random 128-bit IV for the first round
 	if(xorBlock === false)			// if there is not enough entropy, abort
 		return false;
-//var xorBlock = [1, 2, 3, 4];		// IV for the first round, encrypted block for the following rounds
 	var cipher = new AES(key);
 	var ciphertext = new Array();		// the ciphertext is prepended with the random IV
 	ciphertext = ciphertext.concat(xorBlock);
@@ -772,14 +813,11 @@ function GetCookie(name)
 {
 	if(document.cookie.length > 0) {
 		c_start = document.cookie.indexOf(name + "=");
-//alert(c_start);	// FIXME: remove
 		if(c_start != -1) {
 			c_start = c_start + name.length + 1;
 			c_end = document.cookie.indexOf(";", c_start);
-//alert(c_end);		// FIXME: remove
 			if(c_end == -1)
 				c_end = document.cookie.length;
-//alert(unescape(document.cookie.substring(c_start, c_end)));	// FIXME: remove
 			return unescape(document.cookie.substring(c_start, c_end));
 		}
 	}
@@ -1110,7 +1148,6 @@ function CryptoInit()
 
 function GetEntropy()
 {
-//	return Random.random_word( 6 );		// FIXME FIXME FIXME
    if ( Random.get_progress() >= 1.0 )
    {
      return Random.random_word( 6 );
