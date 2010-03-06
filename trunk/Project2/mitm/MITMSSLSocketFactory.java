@@ -15,14 +15,24 @@ import java.net.Socket;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.PrivateKey;
+import java.security.Key;
 import java.security.cert.Certificate;
-import java.security.cert.X509Certificate;
+// import java.security.cert.X509Certificate;
 import javax.net.ServerSocketFactory;
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+
+// import iaik.x509.X509Certificate;
+import iaik.asn1.structures.*;
+
+import java.util.Enumeration;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+import java.math.BigInteger;
+
 
 
 /**
@@ -77,6 +87,83 @@ public final class MITMSSLSocketFactory implements MITMSocketFactory
 	    keyStore.load(new FileInputStream(keyStoreFile), keyStorePassword);
 
 	    this.ks = keyStore;
+	    
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+System.out.println("-----------------------------------------------------------");
+// check aliases in keyStor
+for( Enumeration e = keyStore.aliases() ; e.hasMoreElements() ;) {
+         System.out.println(e.nextElement());
+}
+System.out.println("----------------------");
+
+// check certificate for the CA (us :)
+iaik.x509.X509Certificate caCert = new iaik.x509.X509Certificate( (keyStore.getCertificate("cs255")).getEncoded() );
+System.out.println("Certificate for: " + caCert.getSubjectDN());
+System.out.println("Certificate issued by: " + caCert.getIssuerDN());
+System.out.println("The certificate is valid from " + caCert.getNotBefore() + " to " + caCert.getNotAfter());
+System.out.println("Certificate SN#: " + caCert.getSerialNumber());
+System.out.println("Signature algorithm: " + caCert.getSigAlgName());
+System.out.println("----------------------");
+
+// create new certificate for "www.google.com"
+/*iaik.x509.X509Certificate X509cert = new iaik.x509.X509Certificate();
+GregorianCalendar date = (GregorianCalendar)Calendar.getInstance();
+X509cert.setValidNotBefore(date.getTime());
+date.add(Calendar.MONTH, 6);
+X509cert.setValidNotAfter(date.getTime());*/
+
+
+iaik.x509.X509Certificate newCert = new iaik.x509.X509Certificate();
+
+Name issuer = new Name();	// issuer: CN=cs255, OU=Stanford, O=EE, L=Palo Alto, S=California, C=US
+issuer.addRDN(iaik.asn1.ObjectID.country, "US");
+issuer.addRDN(iaik.asn1.ObjectID.locality, "Palo Alto");
+issuer.addRDN(iaik.asn1.ObjectID.organization ,"EE");
+issuer.addRDN(iaik.asn1.ObjectID.organizationalUnit ,"Stanford");
+issuer.addRDN(iaik.asn1.ObjectID.commonName ,"cs255");
+newCert.setIssuerDN(issuer);
+
+iaik.asn1.structures.Name subject = new iaik.asn1.structures.Name();	// the subject of this certificate
+subject.addRDN(iaik.asn1.ObjectID.country, "AT");
+subject.addRDN(iaik.asn1.ObjectID.organization ,"IAIK");
+subject.addRDN(iaik.asn1.ObjectID.emailAddress ,"user@iaik.tu-graz.ac.at");
+subject.addRDN(iaik.asn1.ObjectID.commonName ,"www.google.com");
+newCert.setSubjectDN(subject);
+
+GregorianCalendar date = (GregorianCalendar)Calendar.getInstance();	// validity dates
+date.add(Calendar.MONTH, 6);
+newCert.setValidNotAfter(date.getTime());
+date = (GregorianCalendar)Calendar.getInstance();
+date.add(Calendar.MONTH, -6);
+newCert.setValidNotBefore(date.getTime());
+
+newCert.setSerialNumber(BigInteger.valueOf(0x1234L));			// set cert Serial Number
+
+newCert.setPublicKey(caCert.getPublicKey());				// set Public Key
+
+PrivateKey caKey = (PrivateKey) keyStore.getKey("cs255", keyStorePassword);	// get the key of the signing authority (us :)
+newCert.sign(AlgorithmID.sha1WithRSAEncryption, caKey);			// self-sign the certificate
+
+keyStore.setCertificateEntry("www.google.com", newCert);		// add certificate to repository
+
+System.out.println("----------------------");
+
+// check aliases in keyStor
+for( Enumeration e = keyStore.aliases() ; e.hasMoreElements() ;) {
+         System.out.println(e.nextElement());
+}
+System.out.println("----------------------");
+
+// check certificate for alias
+iaik.x509.X509Certificate cert2 = new iaik.x509.X509Certificate( (keyStore.getCertificate("www.google.com")).getEncoded() );
+System.out.println("Certificate for: " + cert2.getSubjectDN());
+System.out.println("Certificate issued by: " + cert2.getIssuerDN());
+System.out.println("The certificate is valid from " + cert2.getNotBefore() + " to " + cert2.getNotAfter());
+System.out.println("Certificate SN#: " + cert2.getSerialNumber());
+System.out.println("Signature algorithm: " + cert2.getSigAlgName());
+
+System.out.println("-----------------------------------------------------------");
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 	} else {
 	    keyStore = null;
 	}
@@ -141,15 +228,16 @@ public final class MITMSSLSocketFactory implements MITMSocketFactory
      */
     private static class TrustEveryone implements X509TrustManager
     {
-	public void checkClientTrusted(X509Certificate[] chain,
+	public void checkClientTrusted(java.security.cert.X509Certificate[] chain,
 				       String authenticationType) {
 	}
 	
-	public void checkServerTrusted(X509Certificate[] chain,
+	public void checkServerTrusted(java.security.cert.X509Certificate[] chain,
 				       String authenticationType) {
 	}
 
-	public X509Certificate[] getAcceptedIssuers()
+// 	public iaik.x509.X509Certificate[] getAcceptedIssuers()
+	public java.security.cert.X509Certificate[] getAcceptedIssuers()
 	{
 	    return null;
 	}

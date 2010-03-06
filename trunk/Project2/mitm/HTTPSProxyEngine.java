@@ -143,6 +143,7 @@ public class HTTPSProxyEngine extends ProxyEngine
 
 		    X509Certificate java_cert = null;
 		    SSLSocket remoteSocket = null;
+		    String serverCN;
 		    try {
 			//Lookup the "common name" field of the certificate from the remote server:
 			remoteSocket = (SSLSocket)
@@ -168,7 +169,10 @@ for(int i = 0; i < subjectDN.length(); ++i){
 		break;
 	}
 }
-// System.out.println("*** CN: " + subjectDN.substring(3, end));
+
+serverCN = subjectDN.substring(3, end);
+
+// System.out.println("*** CN: " + serverCN);
 
 // final Pattern commonNamePattern;
 // commonNamePattern = Pattern.compile("CN=(.+),", Pattern.DOTALL);
@@ -199,7 +203,7 @@ for(int i = 0; i < subjectDN.length(); ++i){
 			continue;
 		    }
 
-		    String serverCN = subjectDN.substring(3, end);
+// 		    String serverCN = subjectDN.substring(3, end);
 		    // TODO (DONE): add in code to get the remote server's CN from its cert.
 		    		    		    
 		    //We've already opened the socket, so might as well keep using it:
