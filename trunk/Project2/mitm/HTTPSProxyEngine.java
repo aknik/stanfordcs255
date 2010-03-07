@@ -143,58 +143,11 @@ public class HTTPSProxyEngine extends ProxyEngine
 
 		    X509Certificate java_cert = null;
 		    SSLSocket remoteSocket = null;
-		    String serverCN;
+// 		    String serverCN;
 		    try {
 			//Lookup the "common name" field of the certificate from the remote server:
 			remoteSocket = (SSLSocket)
 			    m_proxySSLEngine.getSocketFactory().createClientSocket(remoteHost, remotePort);
-			    
-///////////////////////////////////////////
-SSLSession session = remoteSocket.getSession();
-java_cert = (X509Certificate) session.getPeerCertificates()[0];
-
-System.out.println("\tCertificate for: " + java_cert.getSubjectDN());
-System.out.println("\tCertificate issued by: " + java_cert.getIssuerDN());
-System.out.println("\tThe certificate is valid from " + java_cert.getNotBefore() + " to " + java_cert.getNotAfter());
-System.out.println("\tCertificate SN# " + java_cert.getSerialNumber());
-System.out.println("\tGenerated with " + java_cert.getSigAlgName());
-
-final String subjectDN = new String(java_cert.getSubjectDN().getName());
-// System.out.println("*** subject DN = " + subjectDN);
-int end = 0;
-for(int i = 0; i < subjectDN.length(); ++i){
-	if(subjectDN.substring(i, i+1).equals(",")){
-		end = i;
-		break;
-	}
-}
-
-serverCN = subjectDN.substring(3, end);
-
-// System.out.println("*** CN: " + serverCN);
-
-// final Pattern commonNamePattern;
-// commonNamePattern = Pattern.compile("CN=(.+),", Pattern.DOTALL);
-// final Matcher commonNameMatcher = commonNamePattern.matcher(subjectDN);
-// System.out.println("*** common name = " + commonNameMatcher.group(1));
-
-
-// 		final byte[] bufferSSL = new byte[40960];
-// 		final BufferedInputStream inSSL =
-// 		    new BufferedInputStream(remoteSocket.getInputStream(),
-// 					    bufferSSL.length);
-// inSSL.mark(bufferSSL.length);
-// 
-// // Read a buffer full.
-// final int bytesReadSSL = inSSL.read(bufferSSL);
-// 
-// final String lineSSL =
-// 	bytesReadSSL > 0 ?
-// 	new String(bufferSSL, 0, bytesReadSSL, "US-ASCII") : "";
-// 		    
-// System.err.println(lineSSL);
-///////////////////////////////////////////
-			    
 		    } catch (IOException ioe) {
 			ioe.printStackTrace();
 			// Try to be nice and send a reasonable error message to client
@@ -202,9 +155,36 @@ serverCN = subjectDN.substring(3, end);
 			continue;
 		    }
 
-// 		    String serverCN = subjectDN.substring(3, end);
-		    // TODO (DONE): add in code to get the remote server's CN from its cert.
-		    		    		    
+		// TODO (DONE): add in code to get the remote server's CN from its cert.
+			SSLSession session = remoteSocket.getSession();
+			java_cert = (X509Certificate) session.getPeerCertificates()[0];
+
+			System.out.println("\tCertificate for: " + java_cert.getSubjectDN());
+			System.out.println("\tCertificate issued by: " + java_cert.getIssuerDN());
+			System.out.println("\tThe certificate is valid from " + java_cert.getNotBefore() + " to " + java_cert.getNotAfter());
+			System.out.println("\tCertificate SN# " + java_cert.getSerialNumber());
+			System.out.println("\tGenerated with " + java_cert.getSigAlgName());
+
+			final String subjectDN = new String(java_cert.getSubjectDN().getName());
+			// System.out.println("*** subject DN = " + subjectDN);
+			int end = 0;
+			for(int i = 0; i < subjectDN.length(); ++i){
+				if(subjectDN.substring(i, i+1).equals(",")){
+					end = i;
+					break;
+				}
+			}
+
+			String serverCN = subjectDN.substring(3, end);
+
+			// System.out.println("*** CN: " + serverCN);
+
+			// final Pattern commonNamePattern;
+			// commonNamePattern = Pattern.compile("CN=(.+),", Pattern.DOTALL);
+			// final Matcher commonNameMatcher = commonNamePattern.matcher(subjectDN);
+			// System.out.println("*** common name = " + commonNameMatcher.group(1));
+		///////////////////////////////////////////
+
 		    //We've already opened the socket, so might as well keep using it:
 		    m_proxySSLEngine.setRemoteSocket(remoteSocket);
 
