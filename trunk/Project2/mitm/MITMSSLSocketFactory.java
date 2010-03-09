@@ -28,6 +28,7 @@ import javax.net.ssl.SSLSocketFactory;
 
 // import iaik.x509.X509Certificate;
 import iaik.asn1.structures.*;
+import java.security.MessageDigest;
 
 import java.util.Enumeration;
 import java.util.Calendar;
@@ -87,83 +88,6 @@ public final class MITMSSLSocketFactory implements MITMSocketFactory
 	    keyStore = KeyStore.getInstance(keyStoreType);
 	    keyStore.load(new FileInputStream(keyStoreFile), keyStorePassword);
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-/*System.out.println("-----------------------------------------------------------");
-// check aliases in keyStor
-for( Enumeration e = keyStore.aliases() ; e.hasMoreElements() ;) {
-         System.out.println(e.nextElement());
-}
-System.out.println("----------------------");
-
-// check certificate for the CA (us :)
-iaik.x509.X509Certificate caCert = new iaik.x509.X509Certificate( (keyStore.getCertificate("cs255")).getEncoded() );
-System.out.println("Certificate for: " + caCert.getSubjectDN());
-System.out.println("Certificate issued by: " + caCert.getIssuerDN());
-System.out.println("The certificate is valid from " + caCert.getNotBefore() + " to " + caCert.getNotAfter());
-System.out.println("Certificate SN#: " + caCert.getSerialNumber());
-System.out.println("Signature algorithm: " + caCert.getSigAlgName());
-System.out.println("----------------------");
-
-// create new certificate for "mail.google.com"
-// iaik.x509.X509Certificate X509cert = new iaik.x509.X509Certificate();
-// GregorianCalendar date = (GregorianCalendar)Calendar.getInstance();
-// X509cert.setValidNotBefore(date.getTime());
-// date.add(Calendar.MONTH, 6);
-// X509cert.setValidNotAfter(date.getTime());
-
-
-iaik.x509.X509Certificate newCert = new iaik.x509.X509Certificate();
-
-Name issuer = new Name();	// issuer: CN=cs255, OU=Stanford, O=EE, L=Palo Alto, S=California, C=US
-issuer.addRDN(iaik.asn1.ObjectID.country, "US");
-issuer.addRDN(iaik.asn1.ObjectID.locality, "Palo Alto");
-issuer.addRDN(iaik.asn1.ObjectID.organization ,"EE");
-issuer.addRDN(iaik.asn1.ObjectID.organizationalUnit ,"Stanford");
-issuer.addRDN(iaik.asn1.ObjectID.commonName ,"cs255");
-newCert.setIssuerDN(issuer);
-
-iaik.asn1.structures.Name subject = new iaik.asn1.structures.Name();	// the subject of this certificate
-subject.addRDN(iaik.asn1.ObjectID.country, "AT");
-subject.addRDN(iaik.asn1.ObjectID.organization ,"IAIK");
-subject.addRDN(iaik.asn1.ObjectID.commonName ,"mail.google.com");
-newCert.setSubjectDN(subject);
-
-GregorianCalendar date = (GregorianCalendar)Calendar.getInstance();	// validity dates
-date.add(Calendar.MONTH, 6);
-newCert.setValidNotAfter(date.getTime());
-date = (GregorianCalendar)Calendar.getInstance();
-date.add(Calendar.MONTH, -6);
-newCert.setValidNotBefore(date.getTime());
-
-newCert.setSerialNumber(BigInteger.valueOf(0x1234L));			// set cert Serial Number
-
-newCert.setPublicKey(caCert.getPublicKey());				// set Public Key
-
-PrivateKey caKey = (PrivateKey) keyStore.getKey("cs255", keyStorePassword);	// get the key of the signing authority (us :)
-newCert.sign(AlgorithmID.sha1WithRSAEncryption, caKey);			// self-sign the certificate
-
-keyStore.setCertificateEntry("mail.google.com", newCert);		// add certificate to repository
-
-System.out.println("----------------------");
-
-// check aliases in keyStor
-for( Enumeration e = keyStore.aliases() ; e.hasMoreElements() ;) {
-         System.out.println(e.nextElement());
-}
-System.out.println("----------------------");
-
-// check certificate for alias
-iaik.x509.X509Certificate cert2 = new iaik.x509.X509Certificate( (keyStore.getCertificate("mail.google.com")).getEncoded() );
-System.out.println("Certificate for: " + cert2.getSubjectDN());
-System.out.println("Certificate issued by: " + cert2.getIssuerDN());
-System.out.println("The certificate is valid from " + cert2.getNotBefore() + " to " + cert2.getNotAfter());
-System.out.println("Certificate SN#: " + cert2.getSerialNumber());
-System.out.println("Signature algorithm: " + cert2.getSigAlgName());
-
-System.out.println("-----------------------------------------------------------");
-*/
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 	    this.ks = keyStore;
 	    
 	} else {
@@ -208,8 +132,9 @@ System.out.println("-----------------------------------------------------------"
 	    keyStoreCA.load(new FileInputStream(keyStoreFile), keyStorePassword);
 
 	    keyStore = KeyStore.getInstance(keyStoreType);
-	    keyStore.load(new FileInputStream(keyStoreFile), keyStorePassword);
-	    keyStore.deleteEntry("cs255");
+// 	    keyStore.load(new FileInputStream(keyStoreFile), keyStorePassword);
+// 	    keyStore.deleteEntry("cs255");
+	    keyStore.load(null, keyStorePassword);	// initialize empty keystore
 	    
 	    
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -217,21 +142,14 @@ System.out.println("-----------------------------------------------------------"
 System.out.println("Remote CN: " + remoteCN);
 System.out.println("----------------------");
 
-// check aliases in keyStor
-/*for( Enumeration e = keyStore.aliases() ; e.hasMoreElements() ;) {
-         System.out.println(e.nextElement());
-}
-System.out.println("----------------------");*/
-
 // check certificate of the CA (us :)
-// iaik.x509.X509Certificate caCert = new iaik.x509.X509Certificate( (keyStore.getCertificate("cs255")).getEncoded() );
 iaik.x509.X509Certificate caCert = new iaik.x509.X509Certificate( (keyStoreCA.getCertificate("cs255")).getEncoded() );
-System.out.println("Certificate for: " + caCert.getSubjectDN());
-System.out.println("Certificate issued by: " + caCert.getIssuerDN());
-System.out.println("The certificate is valid from " + caCert.getNotBefore() + " to " + caCert.getNotAfter());
-System.out.println("Certificate SN#: " + caCert.getSerialNumber());
-System.out.println("Signature algorithm: " + caCert.getSigAlgName());
-System.out.println("----------------------");
+// System.out.println("Certificate for: " + caCert.getSubjectDN());
+// System.out.println("Certificate issued by: " + caCert.getIssuerDN());
+// System.out.println("The certificate is valid from " + caCert.getNotBefore() + " to " + caCert.getNotAfter());
+// System.out.println("Certificate SN#: " + caCert.getSerialNumber());
+// System.out.println("Signature algorithm: " + caCert.getSigAlgName());
+// System.out.println("----------------------");
 
 // create new certificate for remoteCN
 iaik.x509.X509Certificate newCert = new iaik.x509.X509Certificate();
@@ -245,8 +163,6 @@ issuer.addRDN(iaik.asn1.ObjectID.commonName ,"cs255");
 newCert.setIssuerDN(issuer);
 
 iaik.asn1.structures.Name subject = new iaik.asn1.structures.Name();	// the subject of this certificate
-// subject.addRDN(iaik.asn1.ObjectID.country, "AT");
-// subject.addRDN(iaik.asn1.ObjectID.organization ,"IAIK");
 subject.addRDN(iaik.asn1.ObjectID.commonName, remoteCN);
 newCert.setSubjectDN(subject);
 
@@ -257,7 +173,16 @@ date = (GregorianCalendar)Calendar.getInstance();
 date.add(Calendar.MONTH, -6);
 newCert.setValidNotBefore(date.getTime());
 
-newCert.setSerialNumber(BigInteger.valueOf(0x1234L));			// set cert Serial Number
+MessageDigest sha = MessageDigest.getInstance("SHA-1");			// set cert Serial Number
+byte[] md = sha.digest( remoteCN.getBytes() );
+BigInteger bi = new BigInteger(md);
+bi = bi.remainder(BigInteger.valueOf(123456789));
+bi = bi.abs();
+newCert.setSerialNumber(bi);
+// System.out.println("*******************************");
+// System.out.println("Digest: " + md);
+// System.out.println("Serial Number: " + bi);
+// System.out.println("*******************************");
 
 newCert.setPublicKey(caCert.getPublicKey());				// set Public Key
 
@@ -265,22 +190,16 @@ PrivateKey caSecretKey = (PrivateKey) keyStoreCA.getKey("cs255", keyStorePasswor
 
 newCert.sign(AlgorithmID.sha1WithRSAEncryption, caSecretKey);		// self-sign the certificate
 
-// keyStore.setCertificateEntry(remoteCN, newCert);			// add certificate to repository: alias...
+// keyStore.setCertificateEntry(remoteCN, newCert);			//
 
-iaik.x509.X509Certificate[] chain = new iaik.x509.X509Certificate[2];	// ... and key chain
+iaik.x509.X509Certificate[] chain = new iaik.x509.X509Certificate[2];	// add certificate and key chain to keystore
 chain[0] = newCert;
 chain[1] = caCert;
 keyStore.setKeyEntry(remoteCN, caSecretKey, keyStorePassword, chain);
 
 System.out.println("----------------------");
 
-// check aliases in keyStor
-for( Enumeration e = keyStore.aliases() ; e.hasMoreElements() ;) {
-         System.out.println(e.nextElement());
-}
-System.out.println("----------------------");
-
-// check certificate for alias
+// check new certificate
 iaik.x509.X509Certificate cert2 = new iaik.x509.X509Certificate( (keyStore.getCertificate(remoteCN)).getEncoded() );
 System.out.println("Certificate for: " + cert2.getSubjectDN());
 System.out.println("Certificate issued by: " + cert2.getIssuerDN());
@@ -303,7 +222,7 @@ System.out.println("-----------------------------------------------------------"
 
 	keyManagerFactory.init(keyStore, keyStorePassword);
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-System.out.println("############################  keyStore  ############################");
+/*System.out.println("############################  keyStore  ############################");
 for( Enumeration e = keyStore.aliases() ; e.hasMoreElements() ;) {
          System.out.println(e.nextElement());
 }
@@ -311,7 +230,7 @@ System.out.println("############################  this.ks  #####################
 for( Enumeration e = this.ks.aliases() ; e.hasMoreElements() ;) {
          System.out.println(e.nextElement());
 }
-System.out.println("#####################################################################");
+System.out.println("#####################################################################");*/
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	m_sslContext.init(keyManagerFactory.getKeyManagers(),

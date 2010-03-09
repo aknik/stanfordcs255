@@ -159,11 +159,11 @@ public class HTTPSProxyEngine extends ProxyEngine
 			SSLSession session = remoteSocket.getSession();
 			java_cert = (X509Certificate) session.getPeerCertificates()[0];
 
-			System.out.println("\tCertificate for: " + java_cert.getSubjectDN());
-			System.out.println("\tCertificate issued by: " + java_cert.getIssuerDN());
-			System.out.println("\tThe certificate is valid from " + java_cert.getNotBefore() + " to " + java_cert.getNotAfter());
-			System.out.println("\tCertificate SN# " + java_cert.getSerialNumber());
-			System.out.println("\tGenerated with " + java_cert.getSigAlgName());
+// 			System.out.println("\tCertificate for: " + java_cert.getSubjectDN());
+// 			System.out.println("\tCertificate issued by: " + java_cert.getIssuerDN());
+// 			System.out.println("\tThe certificate is valid from " + java_cert.getNotBefore() + " to " + java_cert.getNotAfter());
+// 			System.out.println("\tCertificate SN# " + java_cert.getSerialNumber());
+// 			System.out.println("\tGenerated with " + java_cert.getSigAlgName());
 
 			final String subjectDN = new String(java_cert.getSubjectDN().getName());
 			// System.out.println("*** subject DN = " + subjectDN);
