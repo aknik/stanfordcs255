@@ -4,6 +4,9 @@ JAVA            = java
 JAVAC           = javac
 
 JAVASRCS        = \
+			mitm/EncryptedPwdFile.java \
+			mitm/SecretSaltFile.java \
+			mitm/PasswordFileGen.java \
 			mitm/MITMProxyServer.java \
 			mitm/ConnectionDetails.java \
 			mitm/CopyStreamRunnable.java \

@@ -7,6 +7,14 @@ package mitm;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 
+
+
+// public class GlobalDataStore {
+// 	public static int acceptedConnections = 1234;
+// }
+// 
+
+
 /**
  * Main class for the Man In The Middle SSL proxy.  Delegates the real work
  * to HTTPSProxyEngine.
@@ -140,7 +148,12 @@ public class MITMProxyServer
 
     public void run() 
     {
+// 	    m_engine.acceptedConnections = m_adminServer.acceptedConnections;
+	    
 	(new Thread(m_adminServer)).start();
+// ++m_adminServer.acceptedConnections;
+// ++m_adminServer.acceptedConnections;
+
 	m_engine.run();
 	System.err.println("Engine exited");
 	System.exit(0);

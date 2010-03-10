@@ -3,6 +3,7 @@
 
 package mitm;
 
+import java.io.*;
 import java.io.BufferedInputStream;
 import java.io.InterruptedIOException;
 import java.io.IOException;
@@ -24,6 +25,12 @@ import iaik.asn1.ObjectID;
 import iaik.asn1.structures.Name;
 
 import javax.net.ssl.SSLSession;
+
+import java.io.File;
+import java.io.ObjectOutputStream;
+import java.io.FileOutputStream;
+import java.io.FileInputStream;
+
 
 
 
@@ -48,7 +55,9 @@ import javax.net.ssl.SSLSession;
  */
 public class HTTPSProxyEngine extends ProxyEngine
 {
-
+	public int acceptedConnections;
+	
+	
     public static final String ACCEPT_TIMEOUT_MESSAGE = "Listen time out";
 
     private String m_tempRemoteHost;
@@ -99,10 +108,45 @@ public class HTTPSProxyEngine extends ProxyEngine
 	// Should be more than adequate.
 	final byte[] buffer = new byte[40960];
 
-        while (true) {
+// try{
+// File accConn0 = new File(JSSEConstants.STATS_FILE_LOCATION);
+// FileOutputStream os0 = new FileOutputStream(accConn0);
+// os0.write(0);
+// os0.close();
+// }
+// catch (Exception e) {
+// e.printStackTrace(System.err);
+// }
+try {
+	BufferedWriter out = new BufferedWriter(new FileWriter(JSSEConstants.STATS_FILE_LOCATION));
+	out.write(Integer.toString(acceptedConnections));
+	out.close();
+}
+catch (IOException e) {
+	e.printStackTrace(System.err);
+} 
+
+
+	while (true) {
             try {
 		//Plaintext Socket with client (i.e. browser)
                 final Socket localSocket = getServerSocket().accept();
+++acceptedConnections;
+// System.out.println("[ProxyEngine] Accepted connections: " + acceptedConnections);
+// File accConn = new File(JSSEConstants.STATS_FILE_LOCATION);
+// FileOutputStream os = new FileOutputStream(accConn);
+// // os.flush();
+// os.write(acceptedConnections);
+// os.close();
+try {
+	BufferedWriter out = new BufferedWriter(new FileWriter(JSSEConstants.STATS_FILE_LOCATION));
+	out.write(Integer.toString(acceptedConnections));
+	out.close();
+}
+catch (IOException e) {
+	e.printStackTrace(System.err);
+} 
+
 
 		// Grab the first plaintext upstream buffer, which we're hoping is 
 		// a CONNECT message.

@@ -6,9 +6,14 @@ package mitm;
 import java.io.*;
 import java.net.*;
 
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLServerSocket;
+
+
 public class MITMAdminClient
 {
-    private Socket m_remoteSocket;
+//     private Socket m_remoteSocket;
+	private SSLSocket m_remoteSocket;
     private String username;
     private String password;
     private String command;
@@ -67,8 +72,10 @@ public class MITMAdminClient
 		}
 	    }
 
-	    // TODO upgrade this to an SSL connection
-	    m_remoteSocket = new Socket( remoteHost, remotePort );
+	    // TODO(DONE BUT UNCOMMENT) upgrade this to an SSL connection
+ 	    MITMSSLSocketFactory myMITMSSLSocketFactory = new MITMSSLSocketFactory();
+            m_remoteSocket = (SSLSocket) myMITMSSLSocketFactory.createClientSocket( remoteHost, remotePort );
+// 	    m_remoteSocket = new Socket( remoteHost, remotePort );
 	    
 	}
 	catch (Exception e) {
@@ -90,15 +97,16 @@ public class MITMAdminClient
 		writer.flush();
 	    }
 
-	    // now read back any response
+		// now read back any response
 
 	    System.out.println("");
 	    System.out.println("Receiving input from MITM proxy:");
 	    System.out.println("");
+
 	    BufferedReader r = new BufferedReader(new InputStreamReader(m_remoteSocket.getInputStream()));
 	    String line = null;
 	    while ((line = r.readLine()) != null) {
-		System.out.println(line);
+		System.out.println("[AdminClient]: " + line);
 	    }
 	} catch (Exception e) {
 	    e.printStackTrace();
