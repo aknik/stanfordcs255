@@ -5,19 +5,23 @@ package mitm;
 
 import java.io.*;
 import java.net.*;
-
+import java.security.MessageDigest;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLServerSocket;
+import java.security.KeyStore;
+import javax.crypto.SecretKey;
+import javax.crypto.Mac;
 
 
 public class MITMAdminClient
 {
 //     private Socket m_remoteSocket;
-	private SSLSocket m_remoteSocket;
+    private SSLSocket m_remoteSocket;
     private String username;
     private String password;
     private String command;
     private String commonName = "";
+    private String CRAActive;
     
     public static void main( String [] args ) {
 	MITMAdminClient admin = new MITMAdminClient( args );
@@ -56,18 +60,26 @@ public class MITMAdminClient
 	    {
 		if (args[i].equals("-remoteHost")) {
 		    remoteHost = args[++i];
-		} else if (args[i].equals("-remotePort")) {
+		} 
+		else if (args[i].equals("-remotePort")) {
 		    remotePort = Integer.parseInt(args[++i]);
-		} else if (args[i].equals("-userName")) {
+		} 
+		else if (args[i].equals("-userName")) {
 		    username = args[++i];
-		} else if (args[i].equals("-userPassword")) {
+		} 
+		else if (args[i].equals("-userPassword")) {
 		    password = args[++i];
-		} else if (args[i].equals("-cmd")) {
+		} 
+		else if (args[i].equals("-cmd")) {
 		    command = args[++i];
 		    if( command.equals("enable") || command.equals("disable") ) {
 			commonName = args[++i];
 		    }
-		} else {
+		} 
+		else if (args[i].equals("-CRA")) {
+		    CRAActive = args[++i];
+		}
+		else {
 		    throw printUsage();
 		}
 	    }
@@ -75,7 +87,7 @@ public class MITMAdminClient
 	    // TODO(DONE BUT UNCOMMENT) upgrade this to an SSL connection
  	    MITMSSLSocketFactory myMITMSSLSocketFactory = new MITMSSLSocketFactory();
             m_remoteSocket = (SSLSocket) myMITMSSLSocketFactory.createClientSocket( remoteHost, remotePort );
-// 	    m_remoteSocket = new Socket( remoteHost, remotePort );
+
 	    
 	}
 	catch (Exception e) {
@@ -87,27 +99,79 @@ public class MITMAdminClient
     public void run() 
     {
 	try {
+	    PrintWriter writer = new PrintWriter( m_remoteSocket.getOutputStream() );
 	    if( m_remoteSocket != null ) {
-		PrintWriter writer =
-		    new PrintWriter( m_remoteSocket.getOutputStream() );
 		writer.println("username:"+username);
 		writer.println("password:"+password);
+		writer.println("CRA:"+CRAActive);
 		writer.println("command:"+command);
 		writer.println("CN:"+commonName);
 		writer.flush();
 	    }
 
-		// now read back any response
-
-	    System.out.println("");
-	    System.out.println("Receiving input from MITM proxy:");
-	    System.out.println("");
+	    // now read back any response
 
 	    BufferedReader r = new BufferedReader(new InputStreamReader(m_remoteSocket.getInputStream()));
 	    String line = null;
+
+	    if( !CRAActive.equals(null) && CRAActive.equals("active") ) {
+
+
+		    // This loop reads challenge
+		    String challenge = null;
+		    challenge = r.readLine();
+
+		    // Print out the challenge
+		    System.out.println("[AdminClient]: Recieved challenge - " + challenge);
+
+		    // Compute MAC on challenge
+		    SecretKey MAC_key;
+		    Mac mac;
+		    byte[] mac_challenge = null;
+	
+			try {
+				// Load keystore file
+				KeyStore ks = KeyStore.getInstance("JCEKS");
+		    		ks.load(new FileInputStream(JSSEConstants.PWD_KEYSTORE_LOCATION), ("stanfordcs").toCharArray());
+
+				// Re-calculates MAC on password file and compares to saved mac parsed out of file
+				MAC_key = (SecretKey) ks.getKey("mac_key", ("stanfordcs_mac").toCharArray());
+				mac = Mac.getInstance("HMACSHA1");
+				mac.init(MAC_key);
+				System.out.println("[AdminClient]: String to be MACed - " + username + password + challenge);
+				mac_challenge = mac.doFinal((username+password+challenge).getBytes());
+			} 
+			catch (Exception e) { 
+				e.printStackTrace();
+			}
+
+		    String MAC_challenge = new String(mac_challenge);
+
+		    // Print out the MACed challenge
+		    System.out.println("[AdminClient]: Computed mac on challenge - " + MAC_challenge);
+
+		    // Send MACed (username+password+challenge) back to server
+		    if( m_remoteSocket != null ) {
+
+			writer.println(MAC_challenge);
+			writer.flush();
+		    }
+
+            }
+
+	    // This loop extracts stats or shutdown information
+	    int count = 0;
 	    while ((line = r.readLine()) != null) {
+		
+		if (count == 0){
+			System.out.println("");
+		    	System.out.println("Receiving input from MITM proxy:");
+		    	System.out.println("");	
+		}
 		System.out.println("[AdminClient]: " + line);
+		count++;
 	    }
+
 	} catch (Exception e) {
 	    e.printStackTrace();
 	}

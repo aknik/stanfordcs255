@@ -148,11 +148,8 @@ public class MITMProxyServer
 
     public void run() 
     {
-// 	    m_engine.acceptedConnections = m_adminServer.acceptedConnections;
 	    
 	(new Thread(m_adminServer)).start();
-// ++m_adminServer.acceptedConnections;
-// ++m_adminServer.acceptedConnections;
 
 	m_engine.run();
 	System.err.println("Engine exited");
