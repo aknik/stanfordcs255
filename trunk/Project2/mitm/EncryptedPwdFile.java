@@ -13,6 +13,8 @@ Generates an encrypted password file.
 */ 
 public class EncryptedPwdFile implements Serializable{
 
+	public static final long serialVersionUID = 42L;
+
 	HashMap<String, SaltPlusHashedPwd> PASS_MAP;
 	private int NUM_HASHES = 100;
 
