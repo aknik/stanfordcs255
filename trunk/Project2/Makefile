@@ -5,7 +5,6 @@ JAVAC           = javac
 
 JAVASRCS        = \
 			mitm/EncryptedPwdFile.java \
-			mitm/SecretSaltFile.java \
 			mitm/PasswordFileGen.java \
 			mitm/MITMProxyServer.java \
 			mitm/ConnectionDetails.java \
@@ -15,7 +14,6 @@ JAVASRCS        = \
 			mitm/ProxyEngine.java \
 			mitm/ProxyDataFilter.java \
 			mitm/MITMPlainSocketFactory.java \
-			mitm/MITMSSLSocketFactory.java \
 			mitm/MITMSocketFactory.java \
 			mitm/StreamThread.java \
 			mitm/MITMAdminClient.java \
