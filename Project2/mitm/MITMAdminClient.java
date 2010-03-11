@@ -138,7 +138,7 @@ public class MITMAdminClient
 				MAC_key = (SecretKey) ks.getKey("mac_key", ("stanfordcs_mac").toCharArray());
 				mac = Mac.getInstance("HMACSHA1");
 				mac.init(MAC_key);
-				System.out.println("[AdminClient]: String to be MACed - " + username + password + challenge);
+				System.out.println("[AdminClient]: String to be MACed - " + username + password + challenge );
 				mac_challenge = mac.doFinal((username+password+challenge).getBytes());
 			} 
 			catch (Exception e) { 
@@ -152,7 +152,6 @@ public class MITMAdminClient
 
 		    // Send MACed (username+password+challenge) back to server
 		    if( m_remoteSocket != null ) {
-
 			writer.println(MAC_challenge);
 			writer.flush();
 		    }
