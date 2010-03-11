@@ -15,22 +15,22 @@ import java.net.Socket;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.Key;
-import java.security.cert.Certificate;
+// import java.security.PublicKey;
+// import java.security.Key;
+// import java.security.cert.Certificate;
 // import java.security.cert.X509Certificate;
 import javax.net.ServerSocketFactory;
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLServerSocket;
-import javax.net.ssl.SSLServerSocketFactory;
+// import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
+// import javax.net.ssl.SSLSocketFactory;
 
 // import iaik.x509.X509Certificate;
 import iaik.asn1.structures.*;
 import java.security.MessageDigest;
 
-import java.util.Enumeration;
+// import java.util.Enumeration;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.math.BigInteger;

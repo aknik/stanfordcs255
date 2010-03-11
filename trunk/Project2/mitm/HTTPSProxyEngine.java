@@ -5,31 +5,31 @@ package mitm;
 
 import java.io.*;
 import java.io.BufferedInputStream;
-import java.io.InterruptedIOException;
+// import java.io.InterruptedIOException;
 import java.io.IOException;
-import java.io.InputStream;
+// import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.PrintWriter;
+// import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketException;
+// import java.net.SocketException;
 import java.security.cert.X509Certificate;
-import java.util.HashMap;
+// import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import javax.net.ssl.SSLSocket;
 
-import iaik.asn1.ObjectID;
-import iaik.asn1.structures.Name;
+// import iaik.asn1.ObjectID;
+// import iaik.asn1.structures.Name;
 
 import javax.net.ssl.SSLSession;
 
-import java.io.File;
-import java.io.ObjectOutputStream;
-import java.io.FileOutputStream;
-import java.io.FileInputStream;
+// import java.io.File;
+// import java.io.ObjectOutputStream;
+// import java.io.FileOutputStream;
+// import java.io.FileInputStream;
 
 
 
