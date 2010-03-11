@@ -95,7 +95,7 @@ class MITMAdminServer implements Runnable
 			if (CRA.equals("active")){
 
 				// Generate random challenge
-				challenge = randomString("", 32);
+				challenge = randomString("", 16);
 
 				// Print out the MACed challenge
 				System.out.println("[AdminServer]: Sends challenge - " + challenge);
@@ -106,12 +106,12 @@ class MITMAdminServer implements Runnable
 
 				BufferedReader r = new BufferedReader(new InputStreamReader(m_socket.getInputStream()));
 
-				// Read in response
-				String response = null;
+				// Read in response to challenge
+				String response;
 	    			response = r.readLine();
 
 				// Compare server computed MAC on (username+password+challenge) to response
-				if ( checkResponse(userName,password,challenge,response) ){
+				if ( checkResponse(userName,password,challenge,response.getBytes() ) ){
 					System.out.println("[AdminServer]: Client authenticated successfully");
 					doCommand( command );
 				}
@@ -282,9 +282,10 @@ class MITMAdminServer implements Runnable
 		calc_mac = mac.doFinal((username+password+challenge).getBytes());
 
 		String string_calc_mac = new String(calc_mac);
+		String string_response = new String(response);
 
 		// Print out the MACed challenge
-		System.out.println("[AdminServer]: MACed challenge - " + string_calc_mac);
+		System.out.println("[AdminServer]: client - " + string_response + " server - " + string_calc_mac);
 
 		return Arrays.equals(response, calc_mac);
 	}
