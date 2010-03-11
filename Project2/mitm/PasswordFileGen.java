@@ -2,10 +2,10 @@ package mitm;
 import java.io.File;
 import java.io.ObjectOutputStream;
 import java.io.FileOutputStream;
-import java.io.FileInputStream;
+// import java.io.FileInputStream;
 import javax.crypto.SealedObject;
-import javax.crypto.CipherInputStream;
-import javax.crypto.CipherOutputStream;
+// import javax.crypto.CipherInputStream;
+// import javax.crypto.CipherOutputStream;
 import javax.crypto.Cipher;
 import java.util.Scanner;
 import java.security.SecureRandom;
@@ -14,8 +14,8 @@ import java.security.KeyStore;
 import javax.crypto.SecretKey;
 import javax.crypto.Mac;
 import java.io.ByteArrayOutputStream;
-import java.security.cert.Certificate;
-import java.security.KeyStore.PasswordProtection;
+// import java.security.cert.Certificate;
+// import java.security.KeyStore.PasswordProtection;
  
 /**
 This file reads in a plaintext file containing usernames and passwords and generates an encrypted file from which

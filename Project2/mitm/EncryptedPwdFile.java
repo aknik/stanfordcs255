@@ -2,18 +2,18 @@ package mitm;
  
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
+// import java.util.Set;
 import java.io.Serializable;
 import java.security.MessageDigest;
 import java.util.Arrays;
-import java.util.Iterator;
+// import java.util.Iterator;
 
 /**
 Generates an encrypted password file.
 */ 
 public class EncryptedPwdFile implements Serializable{
 
-	public static final long serialVersionUID = 42L;
+	public static final long serialVersionUID = -1807021266774975410L;
 
 	HashMap<String, SaltPlusHashedPwd> PASS_MAP;
 	private int NUM_HASHES = 100;
@@ -22,7 +22,9 @@ public class EncryptedPwdFile implements Serializable{
 	SaltPlusHashedPwd is struct equivalent in java. Creates object that wraps users salt and password.
 	*/
 	private class SaltPlusHashedPwd implements Serializable{
-
+	
+		public static final long serialVersionUID = 7118028333207267909L;
+		
 		String salt;
 		byte[] pwd;
 		 

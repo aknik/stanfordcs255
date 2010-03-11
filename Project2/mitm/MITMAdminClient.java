@@ -4,10 +4,10 @@
 package mitm;
 
 import java.io.*;
-import java.net.*;
-import java.security.MessageDigest;
+// import java.net.*;
+// import java.security.MessageDigest;
 import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLServerSocket;
+// import javax.net.ssl.SSLServerSocket;
 import java.security.KeyStore;
 import javax.crypto.SecretKey;
 import javax.crypto.Mac;
@@ -21,7 +21,7 @@ public class MITMAdminClient
     private String password;
     private String command;
     private String commonName = "";
-    private String CRAActive;
+    private String CRAActive = "-";
     
     public static void main( String [] args ) {
 	MITMAdminClient admin = new MITMAdminClient( args );
@@ -114,7 +114,8 @@ public class MITMAdminClient
 	    BufferedReader r = new BufferedReader(new InputStreamReader(m_remoteSocket.getInputStream()));
 	    String line = null;
 
-	    if( !CRAActive.equals(null) && CRAActive.equals("active") ) {
+// 	    if( !CRAActive.equals(null) && CRAActive.equals("active") ) {
+// 		if( (CRAActive.length() > 0) && (CRAActive.equals("active")) ) {
 
 
 		    // This loop reads challenge
@@ -122,7 +123,7 @@ public class MITMAdminClient
 		    challenge = r.readLine();
 
 		    // Print out the challenge
-		    System.out.println("[AdminClient]: Recieved challenge - " + challenge);
+		    System.out.println("[AdminClient]: Received challenge - " + challenge);
 
 		    // Compute MAC on challenge
 		    SecretKey MAC_key;
@@ -145,7 +146,21 @@ public class MITMAdminClient
 				e.printStackTrace();
 			}
 
-		    String MAC_challenge = new String(mac_challenge);
+// 		    String MAC_challenge = new String(mac_challenge);
+
+// int i = 0;
+// System.out.println("[AdminClient]:\t" + mac_challenge.length);
+// while(i < mac_challenge.length) {
+// System.out.println("[AdminClient]:\t" + mac_challenge[i]);
+// ++i;
+// }
+int i = 0;
+String MAC_challenge = new String();
+while(i < mac_challenge.length) {
+// 	System.out.println("[AdminClient]:\t" + Integer.toHexString(mac_challenge[i] + 128));
+	MAC_challenge += Integer.toHexString(mac_challenge[i] + 128);
+	++i;
+}
 
 		    // Print out the MACed challenge
 		    System.out.println("[AdminClient]: Computed mac on challenge - " + MAC_challenge);
@@ -156,7 +171,7 @@ public class MITMAdminClient
 			writer.flush();
 		    }
 
-            }
+//             }
 
 	    // This loop extracts stats or shutdown information
 	    int count = 0;

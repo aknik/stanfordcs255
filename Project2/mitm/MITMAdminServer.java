@@ -1,7 +1,4 @@
 /**
- * CS255 project 2
- */
-/**
  * CS255 Project 2
  */
 
@@ -9,18 +6,16 @@ package mitm;
 
 import java.security.SecureRandom;
 import java.net.*;
-import javax.net.ssl.SSLServerSocket;
+// import javax.net.ssl.SSLServerSocket;
 import java.io.*;
 import java.util.*;
 import java.util.regex.*;
 import java.security.KeyStore;
 import javax.crypto.SecretKey;
-import javax.crypto.Cipher;
+// import javax.crypto.Cipher;
 import javax.crypto.SealedObject;
 import javax.crypto.Mac;
 import java.io.ByteArrayInputStream;
-
-import javax.net.ssl.SSLServerSocket;
 
 
 
@@ -75,15 +70,13 @@ class MITMAdminServer implements Runnable
 		Matcher userPwdMatcher =
 		    userPwdPattern.matcher(line);
 
-		// parse username and pwd
+		    // parse username and pwd
 		if (userPwdMatcher.find()) {
 		    String userName = userPwdMatcher.group(1);
 		    String password = userPwdMatcher.group(2);
 		    String CRA = userPwdMatcher.group(3);
 
 		    // if authenticated, do the command
-
-		   
 		    if( authUser(userName,password) ) {
 			String command = userPwdMatcher.group(4);
 			String commonName = userPwdMatcher.group(5);
@@ -111,7 +104,7 @@ class MITMAdminServer implements Runnable
 	    			response = r.readLine();
 
 				// Compare server computed MAC on (username+password+challenge) to response
-				if ( checkResponse(userName,password,challenge,response.getBytes() ) ){
+				if ( checkResponse(userName, password, challenge, response) ){
 					System.out.println("[AdminServer]: Client authenticated successfully");
 					doCommand( command );
 				}
@@ -263,7 +256,7 @@ class MITMAdminServer implements Runnable
     /*
     Compares clients response to challenge with servers computed version of (username+password+challenge)
     */
-    private boolean checkResponse(String username, String password, String challenge, byte[] response) {
+    private boolean checkResponse(String username, String password, String challenge, String response) {
 
 	SecretKey MAC_key;
 	Mac mac;
@@ -281,13 +274,35 @@ class MITMAdminServer implements Runnable
 		System.out.println("[AdminServer]: String to be MACed - " + username + password + challenge);
 		calc_mac = mac.doFinal((username+password+challenge).getBytes());
 
-		String string_calc_mac = new String(calc_mac);
-		String string_response = new String(response);
+// 		String string_calc_mac = new String(calc_mac);
+// 		String string_response = new String(response);
+
+int i = 0;
+String string_calc_mac = new String();
+while(i < calc_mac.length) {
+// 	System.out.println("[AdminServer]:\t" + Integer.toHexString(calc_mac[i] + 128));
+	string_calc_mac += Integer.toHexString(calc_mac[i] + 128);
+	++i;
+}
 
 		// Print out the MACed challenge
-		System.out.println("[AdminServer]: client - " + string_response + " server - " + string_calc_mac);
+		System.out.println("[AdminServer]:\nclient:\t" + response + "\nserver:\t" + string_calc_mac);
 
-		return Arrays.equals(response, calc_mac);
+// int i = 0;
+// System.out.println("[AdminServer]:\t" + calc_mac.length + "\t" + response.length);
+// while(i < calc_mac.length) {
+// System.out.println("[AdminServer]:\t" + calc_mac[i] + "\t" + response[i]);
+// ++i;
+// }
+
+// int i = 0;
+// while(i < calc_mac.length) {
+// System.out.println("[AdminServer]:\t" + Integer.toHexString(calc_mac[i] + 128));
+// ++i;
+// }
+
+		//return Arrays.equals(response, calc_mac);
+		return string_calc_mac.equals(response);
 	}
 	catch (Exception e) {
 		System.out.println("ERROR: MAC KEY NOT FOUND!");
