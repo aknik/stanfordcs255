@@ -1,0 +1,1 @@
+java mitm.MITMProxyServer -keyStore mykeystore -keyStorePassword password -outputFile log.log &
