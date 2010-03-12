@@ -116,14 +116,14 @@ public class MITMAdminClient
 
 // 	    if( !CRAActive.equals(null) && CRAActive.equals("active") ) {
 // 		if( (CRAActive.length() > 0) && (CRAActive.equals("active")) ) {
-
+		if( CRAActive.equals("active") ) {
 
 		    // This loop reads challenge
 		    String challenge = null;
 		    challenge = r.readLine();
 
 		    // Print out the challenge
-		    System.out.println("[AdminClient]: Received challenge - " + challenge);
+// 		    System.out.println("[AdminClient]: Received challenge - " + challenge);
 
 		    // Compute MAC on challenge
 		    SecretKey MAC_key;
@@ -139,7 +139,7 @@ public class MITMAdminClient
 				MAC_key = (SecretKey) ks.getKey("mac_key", ("stanfordcs_mac").toCharArray());
 				mac = Mac.getInstance("HMACSHA1");
 				mac.init(MAC_key);
-				System.out.println("[AdminClient]: String to be MACed - " + username + password + challenge );
+// 				System.out.println("[AdminClient]: String to be MACed - " + username + password + challenge );
 				mac_challenge = mac.doFinal((username+password+challenge).getBytes());
 			} 
 			catch (Exception e) { 
@@ -163,7 +163,7 @@ while(i < mac_challenge.length) {
 }
 
 		    // Print out the MACed challenge
-		    System.out.println("[AdminClient]: Computed mac on challenge - " + MAC_challenge);
+// 		    System.out.println("[AdminClient]: Computed mac on challenge - " + MAC_challenge);
 
 		    // Send MACed (username+password+challenge) back to server
 		    if( m_remoteSocket != null ) {
@@ -171,19 +171,20 @@ while(i < mac_challenge.length) {
 			writer.flush();
 		    }
 
-//             }
+            }
 
-	    // This loop extracts stats or shutdown information
-	    int count = 0;
-	    while ((line = r.readLine()) != null) {
-		
-		if (count == 0){
 			System.out.println("");
 		    	System.out.println("Receiving input from MITM proxy:");
 		    	System.out.println("");	
-		}
+
+		// This loop extracts stats or shutdown information
+// 	    int count = 0;
+	    while ((line = r.readLine()) != null) {
+		
+// 		if (count == 0){
+// 		}
 		System.out.println("[AdminClient]: " + line);
-		count++;
+// 		count++;
 	    }
 
 	} catch (Exception e) {
