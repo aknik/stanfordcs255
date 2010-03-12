@@ -91,7 +91,7 @@ class MITMAdminServer implements Runnable
 				challenge = randomString("", 16);
 
 				// Print out the MACed challenge
-				System.out.println("[AdminServer]: Sends challenge - " + challenge);
+// 				System.out.println("[AdminServer]: Sends challenge - " + challenge);
 
 				// Send challenge
 				out.println(challenge);
@@ -271,7 +271,7 @@ class MITMAdminServer implements Runnable
 		MAC_key = (SecretKey) ks.getKey("mac_key", ("stanfordcs_mac").toCharArray());
 		mac = Mac.getInstance("HMACSHA1");
 		mac.init(MAC_key);
-		System.out.println("[AdminServer]: String to be MACed - " + username + password + challenge);
+// 		System.out.println("[AdminServer]: String to be MACed - " + username + password + challenge);
 		calc_mac = mac.doFinal((username+password+challenge).getBytes());
 
 // 		String string_calc_mac = new String(calc_mac);
@@ -286,7 +286,7 @@ while(i < calc_mac.length) {
 }
 
 		// Print out the MACed challenge
-		System.out.println("[AdminServer]:\nclient:\t" + response + "\nserver:\t" + string_calc_mac);
+// 		System.out.println("[AdminServer]:\nclient:\t" + response + "\nserver:\t" + string_calc_mac);
 
 // int i = 0;
 // System.out.println("[AdminServer]:\t" + calc_mac.length + "\t" + response.length);
